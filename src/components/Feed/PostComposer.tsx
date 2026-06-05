@@ -319,7 +319,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
           {/* ========== CIVIC FIELDS ========== */}
           {activeTrack === 'civic' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="responsive-grid">
                 <div className="form-group">
                   <label>Category</label>
                   <select className="standard-input" value={civicCategory} onChange={(e) => setCivicCategory(e.target.value)} style={{ background: 'var(--surface-color)', color: 'var(--text-main)' }}>
@@ -382,7 +382,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
           {/* ========== GIG FIELDS ========== */}
           {activeTrack === 'gig' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="responsive-grid">
                 <div className="form-group">
                   <label>Service Category</label>
                   <select className="standard-input" value={gigCategory} onChange={(e) => setGigCategory(e.target.value)} style={{ background: 'var(--surface-color)', color: 'var(--text-main)' }}>
@@ -429,7 +429,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
           {/* ========== PROJECT FIELDS ========== */}
           {activeTrack === 'project' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="responsive-grid">
                 <div className="form-group">
                   <label>Project Category</label>
                   <select className="standard-input" value={projectCategory} onChange={(e) => setProjectCategory(e.target.value)} style={{ background: 'var(--surface-color)', color: 'var(--text-main)' }}>

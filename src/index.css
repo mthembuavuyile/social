@@ -561,6 +561,19 @@ body {
   margin-bottom: 12px;
 }
 
+.responsive-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 600px) {
+  .responsive-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -1599,6 +1612,57 @@ body {
   left: 0;
   right: 0;
   height: 2px;
+  background: var(--accent-primary);
+  border-radius: 2px 2px 0 0;
+}
+
+/* ========================================================= */
+/* FEED FILTER BAR                                           */
+/* ========================================================= */
+.feed-filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.feed-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.civic-filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.civic-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.civic-filter-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-smooth);
+}
+.civic-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.civic-filter-btn.active {
+  background: var(--text-main);
+  color: var(--bg-color);
+  border-color: var(--text-main);
 }
 
 /* Track-specific active colors */

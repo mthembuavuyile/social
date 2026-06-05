@@ -941,26 +941,7 @@ export default function App() {
                   <span className="profile-card-role">{isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}</span>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-                <TrackSelector value={trackFilter} onChange={(t) => setTrackFilter(t as any)} showAll />
-                <select 
-                  className="standard-input" 
-                  value={selectedProvince} 
-                  onChange={(e) => setSelectedProvince(e.target.value)}
-                  style={{ background: 'var(--surface-color)', color: 'var(--text-main)', padding: '6px 12px', minWidth: '130px', height: '36px' }}
-                >
-                  <option value="all">All Provinces</option>
-                  <option value="Eastern Cape">Eastern Cape</option>
-                  <option value="Free State">Free State</option>
-                  <option value="Gauteng">Gauteng</option>
-                  <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                  <option value="Limpopo">Limpopo</option>
-                  <option value="Mpumalanga">Mpumalanga</option>
-                  <option value="North West">North West</option>
-                  <option value="Northern Cape">Northern Cape</option>
-                  <option value="Western Cape">Western Cape</option>
-                </select>
-              </div>
+
 
               <div className="status-filters">
                 <div className="profile-stat-item"><span className="stat-value">{reputation}</span><span className="stat-label">Points</span></div>
@@ -1008,7 +989,7 @@ export default function App() {
             />
 
             {/* Track Filter */}
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '12px' }}>
+            <div className="feed-filter-bar">
               <TrackSelector 
                 value={trackFilter} 
                 onChange={(t) => setTrackFilter(t as 'all' | 'civic' | 'gig' | 'project')} 
@@ -1018,7 +999,7 @@ export default function App() {
                 className="standard-input" 
                 value={selectedProvince} 
                 onChange={(e) => setSelectedProvince(e.target.value)}
-                style={{ background: 'var(--surface-color)', color: 'var(--text-main)', padding: '6px 12px', minWidth: '130px', height: '40px' }}
+                style={{ background: 'var(--surface-color)', color: 'var(--text-main)', padding: '6px 12px', minWidth: '130px', height: '38px', borderRadius: '99px' }}
               >
                 <option value="all">All Provinces</option>
                 <option value="Eastern Cape">Eastern Cape</option>

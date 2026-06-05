@@ -163,6 +163,26 @@ export const CivicMap: React.FC<CivicMapProps> = ({
     <div style={{ position: 'relative', height: '100%', width: '100%', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
       <div ref={containerRef} style={{ height: '100%', width: '100%', background: '#16181c' }} />
       
+      {/* Empty State Overlay */}
+      {posts.length > 0 && posts.filter(p => p.latitude != null && p.longitude != null).length === 0 && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 1000,
+          pointerEvents: 'none'
+        }}>
+          <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-color)', padding: '16px 24px', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--text-main)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem' }}>No Geolocated Reports</h3>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Posts in this view don't have GPS coordinates attached.</p>
+          </div>
+        </div>
+      )}
+
       {/* Visual Legend */}
       <div style={{
         position: 'absolute',
