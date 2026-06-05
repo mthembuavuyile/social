@@ -101,8 +101,8 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
   return (
     <div className="dao-panel">
       <div className="dao-header">
-        <h2>Civic Governance Hub</h2>
-        <p className="profile-sub">You hold the power to shape the community. Propose community updates, vote on settings, and audit disputed repair jobs.</p>
+        <h2>Local Board</h2>
+        <p className="profile-sub">You hold the power to shape the community. Start community polls, vote on settings, and review disputed repair jobs.</p>
       </div>
 
       <div className="dao-tabs">
@@ -111,14 +111,14 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
           onClick={() => setActiveTab('proposals')}
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <FileText size={15} /> Proposals
+          <FileText size={15} /> Community Polls
         </button>
         <button 
           className={`dao-tab-btn ${activeTab === 'court' ? 'active' : ''}`}
           onClick={() => setActiveTab('court')}
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <Scale size={15} /> Disputes Court ({flaggedPosts.length})
+          <Scale size={15} /> Community Review ({flaggedPosts.length})
         </button>
         <button 
           className={`dao-tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
@@ -134,7 +134,7 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
           <div className="widget-card" style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h3 className="widget-title" style={{ marginBottom: '4px' }}>Community Rules & Settings</h3>
+                <h3 className="widget-title" style={{ marginBottom: '4px' }}>Community Initiatives & Settings</h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   Submit setting changes or community initiatives. Costs <strong>10 Ubuntu Points</strong>.
                 </p>
@@ -143,14 +143,14 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                 className="btn-primary" 
                 onClick={() => setShowCreateForm(!showCreateForm)}
               >
-                {showCreateForm ? 'Cancel' : <><Plus size={14} /> New Proposal</>}
+                {showCreateForm ? 'Cancel' : <><Plus size={14} /> New Poll</>}
               </button>
             </div>
 
             {showCreateForm && (
               <form onSubmit={handleSubmit} className="new-proposal-form" style={{ marginTop: '20px' }}>
                 <div className="form-group">
-                  <label>Proposal Title</label>
+                  <label>Poll Title</label>
                   <input 
                     type="text" 
                     className="standard-input" 
@@ -209,7 +209,11 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
             {proposals.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No proposals submitted yet.</p>
             ) : (
-              proposals.map(proposal => {
+              [...proposals].sort((a, b) => {
+                if (a.status === 'active' && b.status !== 'active') return -1;
+                if (a.status !== 'active' && b.status === 'active') return 1;
+                return b.timestamp - a.timestamp;
+              }).map(proposal => {
                 const totalVotes = proposal.totalVotesFor + proposal.totalVotesAgainst;
                 const forPct = totalVotes > 0 ? (proposal.totalVotesFor / totalVotes) * 100 : 50;
                 const againstPct = totalVotes > 0 ? (proposal.totalVotesAgainst / totalVotes) * 100 : 50;
@@ -245,6 +249,12 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                     {proposal.type === 'setting' && proposal.status === 'passed' && (
                       <div style={{ background: 'rgba(16, 185, 129, 0.04)', border: '1px dashed var(--accent-success)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-success)', marginBottom: '12px' }}>
                         ⚙️ Executed: Changed {proposal.settingKey} to "{proposal.settingValue}"
+                      </div>
+                    )}
+
+                    {proposal.status === 'defeated' && (
+                      <div style={{ background: 'rgba(239, 68, 68, 0.04)', border: '1px dashed var(--accent-danger)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-danger)', marginBottom: '12px' }}>
+                        ❌ Defeated: Not enough support. {totalVotes === 0 ? '(10 Points Refunded)' : ''}
                       </div>
                     )}
 
@@ -290,15 +300,15 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
         <div className="court-view">
           <div className="widget-card" style={{ marginBottom: '20px' }}>
             <h3 className="widget-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Scale size={16} /> Neighbor Dispute Audit Cases
+              <Scale size={16} /> Neighbor Dispute Reviews
             </h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              When a repair is submitted but disputed by the community, it goes on trial here. Jurors with <strong>≥40 Ubuntu Points</strong> vote to accept or reject the fixer's work.
+              When a repair is submitted but disputed by the community, it comes here for review. Neighbors with <strong>≥40 Ubuntu Points</strong> vote to accept or reject the fixer's work.
             </p>
           </div>
 
           {flaggedPosts.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No active dispute cases in court.</p>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No active disputes to review.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {flaggedPosts.map(post => {

@@ -22,13 +22,16 @@ import {
 } from 'firebase/firestore';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { db, dbFirestore, auth } from './firebase';
-import { Post, Stat, Trend, DaoSettings, Proposal } from './types';
+import { Post, Trend, DaoSettings, Proposal, Milestone } from './types';
 import { getInitials, getUserColor } from './utils';
 import { PostCard } from './components/Feed/PostCard';
 import { PostComposer } from './components/Feed/PostComposer';
+import { TrackSelector } from './components/Feed/TrackSelector';
 import { Toast } from './components/Layout/Toast';
 import { DaoPanel } from './components/DAO/DaoPanel';
 import { CivicMap } from './components/Map/CivicMap';
+import { ImpactDashboard } from './components/Impact/ImpactDashboard';
+import { ViralCard } from './components/Share/ViralCard';
 import { Home, Compass, Shield, User, Search, Map } from 'lucide-react';
 
 
@@ -37,6 +40,8 @@ export default function App() {
   const [activeView, setActiveView] = useState<'home' | 'explore' | 'profile' | 'dao' | 'map'>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'in_progress' | 'resolved'>('all');
+  const [trackFilter, setTrackFilter] = useState<'all' | 'civic' | 'gig' | 'project'>('all');
+  const [selectedProvince, setSelectedProvince] = useState<string>('all');
   
   // Auth & Profile State
   const [user, setUser] = useState('Guest');
@@ -65,6 +70,9 @@ export default function App() {
     announcement: 'Welcome to UbuntuFix! A decentralized network solving local civic issues.',
     postingAllowed: true
   });
+
+  // Viral Share Modal
+  const [viralSharePost, setViralSharePost] = useState<Post | null>(null);
 
   // Toast System
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'success' | 'error'; show: boolean }>({
@@ -172,8 +180,13 @@ export default function App() {
           reactions: data.reactions || {},
           userReactions: data.userReactions || {},
           flags: data.flags || {},
+          // Track system
+          postTrack: data.postTrack || 'civic',
+          // Civic fields
           category: data.category,
           location: data.location,
+          province: data.province,
+          city: data.city,
           status: data.status || 'active',
           compensationValue: data.compensationValue,
           assignedFixerUid: data.assignedFixerUid,
@@ -184,12 +197,24 @@ export default function App() {
           disputes: data.disputes || {},
           courtVotesKeep: data.courtVotesKeep || {},
           courtVotesBurn: data.courtVotesBurn || {},
+          // Crowdfunding
           isCrowdfunded: data.isCrowdfunded || false,
           bountyGoal: data.bountyGoal,
           bountyRaised: data.bountyRaised || 0,
           backers: data.backers || {},
+          // Geolocation
           latitude: data.latitude,
-          longitude: data.longitude
+          longitude: data.longitude,
+          // Gig fields
+          gigCategory: data.gigCategory,
+          gigContactPhone: data.gigContactPhone,
+          gigPrice: data.gigPrice,
+          gigApplicants: data.gigApplicants || {},
+          gigAcceptedUid: data.gigAcceptedUid,
+          gigAcceptedName: data.gigAcceptedName,
+          // Project fields
+          milestones: data.milestones || [],
+          projectCategory: data.projectCategory,
         });
       });
       setPosts(postsArray);
@@ -332,14 +357,31 @@ export default function App() {
 
           try {
             const propRef = doc(dbFirestore, 'proposals', prop.id);
-            await updateDoc(propRef, { status: finalStatus });
+            await runTransaction(dbFirestore, async (transaction) => {
+              const pDoc = await transaction.get(propRef);
+              if (pDoc.exists() && pDoc.data().status === 'active') {
+                transaction.update(propRef, { status: finalStatus });
 
-            if (passed && prop.type === 'setting' && prop.settingKey && prop.settingValue !== undefined) {
-              const settingsRef = doc(dbFirestore, 'settings', 'dao');
-              await updateDoc(settingsRef, { [prop.settingKey]: prop.settingValue });
+                if (passed && prop.type === 'setting' && prop.settingKey && prop.settingValue !== undefined) {
+                  const settingsRef = doc(dbFirestore, 'settings', 'dao');
+                  transaction.update(settingsRef, { [prop.settingKey]: prop.settingValue });
+                }
+
+                // If defeated due to NO votes, refund 10 points to creator
+                if (!passed && totalVotes === 0 && prop.creatorUid) {
+                  const creatorRepRef = doc(dbFirestore, `reputations/${prop.creatorUid}`);
+                  const creatorDoc = await transaction.get(creatorRepRef);
+                  if (creatorDoc.exists()) {
+                    const currentRep = creatorDoc.data().value || 50;
+                    transaction.update(creatorRepRef, { value: currentRep + 10 });
+                  }
+                }
+              }
+            });
+
+            if (uid === prop.creatorUid) {
+              showToast(`Your Proposal has been ${finalStatus}!`, passed ? 'success' : 'info');
             }
-
-            showToast(`Proposal #${prop.id.substring(0, 4)} has ${finalStatus}!`, passed ? 'success' : 'info');
           } catch (e) {
             console.error("Failed to execute proposal", e);
           }
@@ -348,24 +390,9 @@ export default function App() {
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [proposals]);
+  }, [proposals, uid]);
 
-  // DERIVED STATE: Stats
-  const stats = useMemo<Stat>(() => {
-    let reactions = 0;
-    posts.forEach(p => {
-      reactions += Object.values(p.reactions || {}).reduce((a, b) => a + b, 0);
-    });
-    return {
-      totalPosts: posts.length,
-      totalReactions: reactions,
-      activeUsers: onlineCount,
-    };
-  }, [posts, onlineCount]);
 
-  const activeFixesCount = useMemo(() => {
-    return posts.filter(p => p.status === 'in_progress').length;
-  }, [posts]);
 
   const trendingTags = useMemo<Trend[]>(() => {
     const tagsMap: Record<string, number> = {};
@@ -380,16 +407,26 @@ export default function App() {
       .slice(0, 5);
   }, [posts]);
 
-  // FILTERED POSTS
+  // FILTERED POSTS (with track filter)
   const filteredPosts = useMemo(() => {
     let result = posts;
 
+    // Track filter
+    if (trackFilter !== 'all') {
+      result = result.filter(p => (p.postTrack || 'civic') === trackFilter);
+    }
+
+    // Province filter
+    if (selectedProvince !== 'all') {
+      result = result.filter(p => p.province === selectedProvince);
+    }
+
     // Search query filter
-    const query = searchQuery.toLowerCase().trim();
-    if (query) {
+    const q = searchQuery.toLowerCase().trim();
+    if (q) {
       result = result.filter(p => {
-        const searchableString = `${p.content} ${p.author} ${p.category || ''} ${p.location || ''}`.toLowerCase();
-        return searchableString.includes(query);
+        const searchableString = `${p.content} ${p.author} ${p.category || ''} ${p.location || ''} ${p.gigCategory || ''} ${p.projectCategory || ''}`.toLowerCase();
+        return searchableString.includes(q);
       });
     }
 
@@ -399,47 +436,68 @@ export default function App() {
     }
 
     return result;
-  }, [posts, searchQuery, statusFilter]);
+  }, [posts, searchQuery, statusFilter, trackFilter]);
 
   const flaggedPosts = useMemo(() => {
     return posts.filter(p => p.status === 'jury');
   }, [posts]);
 
-  // ACTIONS
+  // Profile stats
+  const profileStats = useMemo(() => {
+    if (!uid) return { civicReported: 0, gigsPosted: 0, projectsLaunched: 0, backed: 0 };
+    return {
+      civicReported: posts.filter(p => p.authorUid === uid && (p.postTrack || 'civic') === 'civic').length,
+      gigsPosted: posts.filter(p => p.authorUid === uid && p.postTrack === 'gig').length,
+      projectsLaunched: posts.filter(p => p.authorUid === uid && p.postTrack === 'project').length,
+      backed: posts.filter(p => p.backers?.[uid]).length,
+    };
+  }, [posts, uid]);
 
-  const handleCreateReport = async (
-    content: string, 
-    imageUrl: string, 
-    category: string, 
-    location: string,
-    latitude?: number,
-    longitude?: number,
-    isCrowdfunded?: boolean,
-    bountyGoal?: number
-  ) => {
+  // ===== ACTIONS =====
+
+  const handleCreateReport = async (data: {
+    content: string;
+    imageUrl: string;
+    category: string;
+    location: string;
+    province?: string;
+    city?: string;
+    latitude?: number;
+    longitude?: number;
+    isCrowdfunded?: boolean;
+    bountyGoal?: number;
+    postTrack: 'civic' | 'gig' | 'project';
+    gigCategory?: string;
+    gigContactPhone?: string;
+    gigPrice?: number;
+    projectCategory?: string;
+    milestones?: Milestone[];
+  }) => {
     if (user === 'Guest' || !uid) return;
     
     const compensationValues: Record<string, number> = {
-      pothole: 250,
-      water_leak: 200,
-      electricity: 150,
-      sewage: 400,
-      traffic_light: 300,
-      other: 150
+      pothole: 250, water_leak: 200, electricity: 150,
+      sewage: 400, traffic_light: 300, other: 150
     };
-    
-    const comp = compensationValues[category] || 150;
+
+    const baseComp = data.postTrack === 'civic' 
+      ? (data.isCrowdfunded ? data.bountyGoal : compensationValues[data.category] || 150)
+      : data.postTrack === 'gig' 
+        ? data.gigPrice 
+        : data.bountyGoal;
 
     await addDoc(collection(dbFirestore, 'posts'), {
-      content,
-      category,
-      location,
-      imageUrl: imageUrl || null,
+      content: data.content,
+      category: data.category,
+      location: data.location,
+      province: data.province || null,
+      city: data.city || null,
+      imageUrl: data.imageUrl || null,
       author: user,
       authorUid: uid,
       timestamp: firestoreServerTimestamp(),
       status: 'active',
-      compensationValue: isCrowdfunded ? bountyGoal : comp,
+      compensationValue: baseComp || 150,
       reactions: {},
       userReactions: {},
       flags: {},
@@ -447,17 +505,30 @@ export default function App() {
       disputes: {},
       courtVotesKeep: {},
       courtVotesBurn: {},
-      // Geolocation and crowdfunding campaign properties
-      isCrowdfunded: isCrowdfunded || false,
-      bountyGoal: bountyGoal || null,
-      bountyRaised: isCrowdfunded ? 0 : null,
+      // Track system
+      postTrack: data.postTrack,
+      // Crowdfunding
+      isCrowdfunded: data.isCrowdfunded || data.postTrack === 'project',
+      bountyGoal: data.bountyGoal || null,
+      bountyRaised: (data.isCrowdfunded || data.postTrack === 'project') ? 0 : null,
       backers: {},
-      latitude: latitude || null,
-      longitude: longitude || null
+      // Geolocation
+      latitude: data.latitude || null,
+      longitude: data.longitude || null,
+      // Gig fields
+      gigCategory: data.gigCategory || null,
+      gigContactPhone: data.gigContactPhone || null,
+      gigPrice: data.gigPrice || null,
+      gigApplicants: {},
+      gigAcceptedUid: null,
+      gigAcceptedName: null,
+      // Project fields
+      projectCategory: data.projectCategory || null,
+      milestones: data.milestones || [],
     });
 
     const currentRep = reputationsMap[uid] || 50;
-    await setDoc(doc(dbFirestore, `reputations/${uid}`), { value: currentRep + 5 }); // Submit report = +5 Ubuntu Points
+    await setDoc(doc(dbFirestore, `reputations/${uid}`), { value: currentRep + 5 });
   };
 
   const handleBackProject = async (postId: string, amount: number) => {
@@ -470,18 +541,12 @@ export default function App() {
 
     try {
       await runTransaction(dbFirestore, async (transaction) => {
-        // Fetch current wallet balance
         const userWalletDoc = await transaction.get(userWalletRef);
         const currentBalance = userWalletDoc.exists() ? (userWalletDoc.data().value ?? 500) : 500;
-        if (currentBalance < amount) {
-          throw new Error("Insufficient balance.");
-        }
+        if (currentBalance < amount) throw new Error("Insufficient balance.");
 
-        // Fetch current post details
         const postDoc = await transaction.get(postRef);
-        if (!postDoc.exists()) {
-          throw new Error("Post does not exist.");
-        }
+        if (!postDoc.exists()) throw new Error("Post does not exist.");
         const postData = postDoc.data();
         const currentBountyRaised = postData.bountyRaised || 0;
         const newBountyRaised = currentBountyRaised + amount;
@@ -489,12 +554,10 @@ export default function App() {
         const userBackerAmount = currentBackers[uid] || 0;
         const newBackers = { ...currentBackers, [uid]: userBackerAmount + amount };
 
-        // Deduct from wallet and update post bounty
         transaction.set(userWalletRef, { value: currentBalance - amount });
         transaction.update(postRef, {
           bountyRaised: newBountyRaised,
           backers: newBackers,
-          // Update total compensation value as goal increases or is met
           compensationValue: Math.max(postData.compensationValue || 0, newBountyRaised)
         });
       });
@@ -537,10 +600,7 @@ export default function App() {
           newUserReactions[uid] = emoji;
         }
 
-        transaction.update(postRef, {
-          reactions: newReactions,
-          userReactions: newUserReactions
-        });
+        transaction.update(postRef, { reactions: newReactions, userReactions: newUserReactions });
         transaction.set(authorRepRef, { value: newAuthorRep });
       });
     } catch (e) {
@@ -552,12 +612,66 @@ export default function App() {
   const handleClaimGig = async (postId: string) => {
     if (!uid || user === 'Guest') return;
     const postRef = doc(dbFirestore, 'posts', postId);
+    const post = posts.find(p => p.id === postId);
+    
+    // For gig track: mark as complete when owner clicks "Mark as Completed"
+    if (post?.postTrack === 'gig' && post.authorUid === uid) {
+      await updateDoc(postRef, { status: 'resolved_complete' });
+      // Pay the accepted worker
+      if (post.gigAcceptedUid) {
+        const workerEarningsRef = doc(dbFirestore, `earnings/${post.gigAcceptedUid}`);
+        const workerRepRef = doc(dbFirestore, `reputations/${post.gigAcceptedUid}`);
+        await runTransaction(dbFirestore, async (transaction) => {
+          const earningsDoc = await transaction.get(workerEarningsRef);
+          const currentEarnings = earningsDoc.exists() ? (earningsDoc.data().value || 0) : 0;
+          transaction.set(workerEarningsRef, { value: currentEarnings + (post.gigPrice || post.compensationValue || 150) });
+          const repDoc = await transaction.get(workerRepRef);
+          const currentRep = repDoc.exists() ? (repDoc.data().value || 50) : 50;
+          transaction.set(workerRepRef, { value: currentRep + 30 });
+        });
+      }
+      showToast('Gig marked as completed! Worker paid.', 'success');
+      return;
+    }
+
+    // For civic track: claim repair
     await updateDoc(postRef, {
       status: 'in_progress',
       assignedFixerUid: uid,
       assignedFixerName: user
     });
     showToast('Gig claimed! Fix it and submit proof.', 'success');
+  };
+
+  const handleApplyForGig = async (postId: string) => {
+    if (!uid || user === 'Guest') return;
+    const postRef = doc(dbFirestore, 'posts', postId);
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    if (post.gigApplicants?.[uid]) {
+      showToast('You already applied.', 'info');
+      return;
+    }
+
+    const newApplicants = { ...post.gigApplicants, [uid]: { name: user, timestamp: Date.now() } };
+    await updateDoc(postRef, { gigApplicants: newApplicants });
+    showToast('Applied for this gig! The poster will review.', 'success');
+  };
+
+  const handleAcceptApplicant = async (postId: string, applicantUid: string) => {
+    if (!uid) return;
+    const post = posts.find(p => p.id === postId);
+    if (!post || post.authorUid !== uid) return;
+    const applicant = post.gigApplicants?.[applicantUid];
+    if (!applicant) return;
+
+    const postRef = doc(dbFirestore, 'posts', postId);
+    await updateDoc(postRef, {
+      gigAcceptedUid: applicantUid,
+      gigAcceptedName: applicant.name,
+      status: 'in_progress',
+    });
+    showToast(`Accepted ${applicant.name}! You can now coordinate via WhatsApp.`, 'success');
   };
 
   const handleSubmitFix = async (postId: string, fixImageUrl: string) => {
@@ -583,21 +697,14 @@ export default function App() {
       const currentVers = Object.keys(newVerifications).length;
 
       if (currentVers >= 3) {
-        // Complete the fix
         await runTransaction(dbFirestore, async (transaction) => {
-          transaction.update(postRef, {
-            verifications: newVerifications,
-            status: 'resolved_complete'
-          });
-
+          transaction.update(postRef, { verifications: newVerifications, status: 'resolved_complete' });
           const fixerUid = post.assignedFixerUid;
           if (fixerUid) {
             const fixerRepRef = doc(dbFirestore, `reputations/${fixerUid}`);
             const fixerEarningsRef = doc(dbFirestore, `earnings/${fixerUid}`);
-
             const fixerRep = reputationsMap[fixerUid] || 50;
             transaction.set(fixerRepRef, { value: fixerRep + 50 });
-
             const comp = post.compensationValue || 150;
             const fixerEarningsDoc = await transaction.get(fixerEarningsRef);
             const fixerEarningsVal = fixerEarningsDoc.exists() ? (fixerEarningsDoc.data().value || 0) : 0;
@@ -614,11 +721,8 @@ export default function App() {
       const currentDisps = Object.keys(newDisputes).length;
 
       if (currentDisps >= 3) {
-        await updateDoc(postRef, {
-          disputes: newDisputes,
-          status: 'jury'
-        });
-        showToast('disputes reached 3! Repair sent to Disputes Court.', 'error');
+        await updateDoc(postRef, { disputes: newDisputes, status: 'jury' });
+        showToast('Disputes reached 3! Sent to Community Court.', 'error');
       } else {
         await updateDoc(postRef, { disputes: newDisputes });
         showToast(`Dispute registered. ${3 - currentDisps} more to trigger trial.`, 'info');
@@ -653,96 +757,65 @@ export default function App() {
   const handleFlagPost = async (postId: string) => {
     if (!uid) return;
     const currentRep = reputationsMap[uid] || 50;
-    if (currentRep < 5) {
-      showToast('Not enough Ubuntu Points to flag.', 'error');
-      return;
-    }
+    if (currentRep < 5) { showToast('Not enough Ubuntu Points to flag.', 'error'); return; }
     const post = posts.find(p => p.id === postId);
     if (!post) return;
-    if (post.flags?.[uid]) {
-      showToast('You already flagged this.', 'info');
-      return;
-    }
+    if (post.flags?.[uid]) { showToast('You already flagged this.', 'info'); return; }
 
     const postRef = doc(dbFirestore, 'posts', postId);
     const newFlags = { ...post.flags, [uid]: true };
     const currentFlagCount = Object.keys(newFlags).length;
 
     const updates: Record<string, any> = { flags: newFlags };
-    if (currentFlagCount >= 3 && post.status !== 'jury') {
-      updates.status = 'jury';
-    }
+    if (currentFlagCount >= 3 && post.status !== 'jury') { updates.status = 'jury'; }
 
     await updateDoc(postRef, updates);
-    await setDoc(doc(dbFirestore, `reputations/${uid}`), { value: currentRep - 1 }); // Spend 1 rep
-    showToast('Report flagged for disputes review.', 'success');
+    await setDoc(doc(dbFirestore, `reputations/${uid}`), { value: currentRep - 1 });
+    showToast('Report flagged for review.', 'success');
   };
 
   const handleVoteCourt = async (postId: string, vote: 'keep' | 'burn') => {
     if (!uid) return;
     const currentRep = reputationsMap[uid] || 50;
-    if (currentRep < 40) {
-      showToast('Requires ≥40 Ubuntu Points to vote in court.', 'error');
-      return;
-    }
+    if (currentRep < 40) { showToast('Requires ≥40 Ubuntu Points.', 'error'); return; }
     const post = posts.find(p => p.id === postId);
     if (!post) return;
-    if (post.courtVotesKeep?.[uid] || post.courtVotesBurn?.[uid]) {
-      showToast('You already voted on this case.', 'error');
-      return;
-    }
+    if (post.courtVotesKeep?.[uid] || post.courtVotesBurn?.[uid]) { showToast('Already voted.', 'error'); return; }
 
     const postRef = doc(dbFirestore, 'posts', postId);
     
     if (vote === 'keep') {
       const newKeep = { ...post.courtVotesKeep, [uid]: true };
       const keeps = Object.keys(newKeep).length;
-
       if (keeps >= 3) {
         await runTransaction(dbFirestore, async (transaction) => {
-          transaction.update(postRef, {
-            courtVotesKeep: null,
-            courtVotesBurn: null,
-            flags: null,
-            status: 'resolved_complete'
-          });
-
+          transaction.update(postRef, { courtVotesKeep: null, courtVotesBurn: null, flags: null, status: 'resolved_complete' });
           const fixerUid = post.assignedFixerUid;
           if (fixerUid) {
             const fixerRepRef = doc(dbFirestore, `reputations/${fixerUid}`);
             const fixerEarningsRef = doc(dbFirestore, `earnings/${fixerUid}`);
-            
             const fixerRep = reputationsMap[fixerUid] || 50;
             transaction.set(fixerRepRef, { value: fixerRep + 50 });
-
             const comp = post.compensationValue || 150;
             const fixerEarningsDoc = await transaction.get(fixerEarningsRef);
             const fixerEarningsVal = fixerEarningsDoc.exists() ? (fixerEarningsDoc.data().value || 0) : 0;
             transaction.set(fixerEarningsRef, { value: fixerEarningsVal + comp });
           }
         });
-        showToast('Court decision: Fix Approved & Paid.', 'success');
+        showToast('Court: Fix Approved & Paid.', 'success');
       } else {
         await updateDoc(postRef, { courtVotesKeep: newKeep });
       }
     } else {
       const newBurn = { ...post.courtVotesBurn, [uid]: true };
       const burns = Object.keys(newBurn).length;
-
       if (burns >= 3) {
         await runTransaction(dbFirestore, async (transaction) => {
           transaction.update(postRef, {
-            status: 'active',
-            assignedFixerUid: null,
-            assignedFixerName: null,
-            fixImageUrl: null,
-            verifications: null,
-            disputes: null,
-            flags: null,
-            courtVotesKeep: null,
-            courtVotesBurn: null
+            status: 'active', assignedFixerUid: null, assignedFixerName: null,
+            fixImageUrl: null, verifications: null, disputes: null, flags: null,
+            courtVotesKeep: null, courtVotesBurn: null
           });
-
           const fixerUid = post.assignedFixerUid;
           if (fixerUid) {
             const fixerRepRef = doc(dbFirestore, `reputations/${fixerUid}`);
@@ -750,7 +823,7 @@ export default function App() {
             transaction.set(fixerRepRef, { value: Math.max(0, fixerRep - 20) });
           }
         });
-        showToast('Court decision: Fix Rejected & Fine Applied.', 'error');
+        showToast('Court: Fix Rejected & Fine Applied.', 'error');
       } else {
         await updateDoc(postRef, { courtVotesBurn: newBurn });
       }
@@ -758,41 +831,21 @@ export default function App() {
   };
 
   const handleCreateProposal = async (
-    title: string,
-    description: string,
-    type: 'setting' | 'text',
-    settingKey?: 'announcement',
-    settingValue?: string
+    title: string, description: string, type: 'setting' | 'text',
+    settingKey?: 'announcement', settingValue?: string
   ) => {
     if (!uid) return;
     const currentRep = reputationsMap[uid] || 50;
-    if (currentRep < 10) {
-      showToast('Requires ≥10 Ubuntu Points to propose.', 'error');
-      return;
-    }
+    if (currentRep < 10) { showToast('Requires ≥10 Ubuntu Points.', 'error'); return; }
 
     const now = Date.now();
     const duration = 5 * 60 * 1000;
-
     const newProposal: any = {
-      title,
-      description,
-      creator: user,
-      creatorUid: uid,
-      timestamp: now,
-      type,
-      status: 'active',
-      totalVotesFor: 0,
-      totalVotesAgainst: 0,
-      endTime: now + duration,
-      votesFor: {},
-      votesAgainst: {}
+      title, description, creator: user, creatorUid: uid, timestamp: now, type,
+      status: 'active', totalVotesFor: 0, totalVotesAgainst: 0, endTime: now + duration,
+      votesFor: {}, votesAgainst: {}
     };
-
-    if (type === 'setting') {
-      newProposal.settingKey = settingKey;
-      newProposal.settingValue = settingValue;
-    }
+    if (type === 'setting') { newProposal.settingKey = settingKey; newProposal.settingValue = settingValue; }
 
     await addDoc(collection(dbFirestore, 'proposals'), newProposal);
     await setDoc(doc(dbFirestore, `reputations/${uid}`), { value: currentRep - 10 });
@@ -805,39 +858,26 @@ export default function App() {
     if (!proposal) return;
     if (proposal.status !== 'active') return;
     if (proposal.votesFor?.[uid] !== undefined || proposal.votesAgainst?.[uid] !== undefined) {
-      showToast('You already voted.', 'error');
-      return;
+      showToast('You already voted.', 'error'); return;
     }
 
     const proposalRef = doc(dbFirestore, 'proposals', proposalId);
     if (vote === 'for') {
       const newVotesFor = { ...proposal.votesFor, [uid]: voterRep };
-      await updateDoc(proposalRef, {
-        votesFor: newVotesFor,
-        totalVotesFor: proposal.totalVotesFor + voterRep
-      });
+      await updateDoc(proposalRef, { votesFor: newVotesFor, totalVotesFor: proposal.totalVotesFor + voterRep });
     } else {
       const newVotesAgainst = { ...proposal.votesAgainst, [uid]: voterRep };
-      await updateDoc(proposalRef, {
-        votesAgainst: newVotesAgainst,
-        totalVotesAgainst: proposal.totalVotesAgainst + voterRep
-      });
+      await updateDoc(proposalRef, { votesAgainst: newVotesAgainst, totalVotesAgainst: proposal.totalVotesAgainst + voterRep });
     }
   };
 
   const handleSaveProfile = () => {
     const captchaVal = parseInt(captchaAnswerInput);
     if (captchaVal !== captchaNum1 + captchaNum2) {
-      showToast('Incorrect math answer.', 'error');
-      generateCaptcha();
-      return;
+      showToast('Incorrect math answer.', 'error'); generateCaptcha(); return;
     }
-
     const name = profileNameInput.trim();
-    if (name.length < 3) {
-      showToast('Username must be at least 3 characters.', 'error');
-      return;
-    }
+    if (name.length < 3) { showToast('Username must be at least 3 characters.', 'error'); return; }
 
     localStorage.setItem('ubuntuUserName', name);
     localStorage.setItem('ubuntuIsFixer', String(isFixer));
@@ -848,27 +888,19 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    if (!confirm('Are you sure you want to log out? Your local identity will be reset to Guest.')) return;
+    if (!confirm('Are you sure you want to log out?')) return;
     localStorage.removeItem('ubuntuUserName');
     localStorage.removeItem('ubuntuIsFixer');
     localStorage.removeItem('nexysUserName');
-    setUser('Guest');
-    setProfileNameInput('');
-    setIsFixer(false);
-    setIsEditingProfile(false);
-    showToast('Logged out successfully.', 'info');
+    setUser('Guest'); setProfileNameInput(''); setIsFixer(false); setIsEditingProfile(false);
+    showToast('Logged out.', 'info');
   };
 
-  const handleTrendClick = (tag: string) => {
-    setActiveView('home');
-    setSearchQuery(tag);
-  };
+  const handleTrendClick = (tag: string) => { setActiveView('home'); setSearchQuery(tag); };
 
   const initials = getInitials(user);
   const [c1, c2] = getUserColor(user);
-  const userAvatarStyle = {
-    background: `linear-gradient(135deg, ${c1}, ${c2})`
-  };
+  const userAvatarStyle = { background: `linear-gradient(135deg, ${c1}, ${c2})` };
 
   return (
     <div className="app-container">
@@ -876,83 +908,67 @@ export default function App() {
       <div className="ambient-blob blob-1"></div>
       <div className="ambient-blob blob-2"></div>
 
-      {/* Navigation (Left Sidebar / Mobile Bottom Nav) */}
+      {/* Navigation */}
       <nav className="app-nav">
         <div className="nav-brand">
           <div className="logo-mark">U</div>
           <span className="logo-text">UbuntuFix</span>
         </div>
         <div className="nav-links">
-          <button 
-            className={`nav-btn ${activeView === 'home' ? 'active' : ''}`} 
-            onClick={() => { setActiveView('home'); setSearchQuery(''); setStatusFilter('all'); }}
-          >
-            <Home />
-            <span>Civic Feed</span>
+          <button className={`nav-btn ${activeView === 'home' ? 'active' : ''}`} onClick={() => { setActiveView('home'); setSearchQuery(''); setStatusFilter('all'); }}>
+            <Home /><span>Feed</span>
           </button>
-          <button 
-            className={`nav-btn ${activeView === 'map' ? 'active' : ''}`} 
-            onClick={() => { setActiveView('map'); setMapActivePostId(null); }}
-          >
-            <Map />
-            <span>Civic Map</span>
+          <button className={`nav-btn ${activeView === 'map' ? 'active' : ''}`} onClick={() => { setActiveView('map'); setMapActivePostId(null); }}>
+            <Map /><span>Map</span>
           </button>
-          <button 
-            className={`nav-btn ${activeView === 'explore' ? 'active' : ''}`} 
-            onClick={() => setActiveView('explore')}
-          >
-            <Compass />
-            <span>Active Stats</span>
+          <button className={`nav-btn ${activeView === 'explore' ? 'active' : ''}`} onClick={() => setActiveView('explore')}>
+            <Compass /><span>Impact</span>
           </button>
-          <button 
-            className={`nav-btn ${activeView === 'dao' ? 'active' : ''}`} 
-            onClick={() => setActiveView('dao')}
-          >
-            <Shield />
-            <span>Community Hub</span>
+          <button className={`nav-btn ${activeView === 'dao' ? 'active' : ''}`} onClick={() => setActiveView('dao')}>
+            <Shield /><span>Local Board</span>
           </button>
-          <button 
-            className={`nav-btn ${activeView === 'profile' ? 'active' : ''}`} 
-            onClick={() => setActiveView('profile')}
-          >
-            <User />
-            <span>My Profile</span>
+          <button className={`nav-btn ${activeView === 'profile' ? 'active' : ''}`} onClick={() => setActiveView('profile')}>
+            <User /><span>Profile</span>
           </button>
         </div>
         <div className="nav-user-status">
           {uid && (
             <div className="sidebar-profile-card">
               <div className="profile-card-header">
-                <div className="profile-card-avatar" style={userAvatarStyle}>
-                  {initials}
-                </div>
+                <div className="profile-card-avatar" style={userAvatarStyle}>{initials}</div>
                 <div className="profile-card-info">
                   <span className="profile-card-name">{user}</span>
-                  <span className="profile-card-role">
-                    {isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}
-                  </span>
+                  <span className="profile-card-role">{isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}</span>
                 </div>
               </div>
-              
-              <div className="profile-card-stats">
-                <div className="profile-stat-item">
-                  <span className="stat-value">{reputation}</span>
-                  <span className="stat-label">Points</span>
-                </div>
-                <div className="profile-stat-item">
-                  <span className="stat-value">R{walletBalance}</span>
-                  <span className="stat-label">Wallet</span>
-                </div>
-                {isFixer && (
-                  <div className="profile-stat-item">
-                    <span className="stat-value">R{earnings}</span>
-                    <span className="stat-label">Earned</span>
-                  </div>
-                )}
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                <TrackSelector value={trackFilter} onChange={(t) => setTrackFilter(t as any)} showAll />
+                <select 
+                  className="standard-input" 
+                  value={selectedProvince} 
+                  onChange={(e) => setSelectedProvince(e.target.value)}
+                  style={{ background: 'var(--surface-color)', color: 'var(--text-main)', padding: '6px 12px', minWidth: '130px', height: '36px' }}
+                >
+                  <option value="all">All Provinces</option>
+                  <option value="Eastern Cape">Eastern Cape</option>
+                  <option value="Free State">Free State</option>
+                  <option value="Gauteng">Gauteng</option>
+                  <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                  <option value="Limpopo">Limpopo</option>
+                  <option value="Mpumalanga">Mpumalanga</option>
+                  <option value="North West">North West</option>
+                  <option value="Northern Cape">Northern Cape</option>
+                  <option value="Western Cape">Western Cape</option>
+                </select>
+              </div>
+
+              <div className="status-filters">
+                <div className="profile-stat-item"><span className="stat-value">{reputation}</span><span className="stat-label">Points</span></div>
+                <div className="profile-stat-item"><span className="stat-value">R{walletBalance}</span><span className="stat-label">Wallet</span></div>
+                {isFixer && (<div className="profile-stat-item"><span className="stat-value">R{earnings}</span><span className="stat-label">Earned</span></div>)}
               </div>
             </div>
           )}
-          
           <div className="presence-status-footer">
             <span className="presence-dot"></span>
             <span>{onlineCount} {onlineCount === 1 ? 'neighbor' : 'neighbors'} active now</span>
@@ -966,7 +982,7 @@ export default function App() {
         <header className="mobile-header">
           <div className="logo-mark mobile-logo">U</div>
           <h1 id="mobilePageTitle">
-            {activeView === 'home' ? 'Civic Feed' : activeView === 'map' ? 'Civic Map' : activeView === 'explore' ? 'Stats' : activeView === 'dao' ? 'Hub' : 'Profile'}
+            {activeView === 'home' ? 'Feed' : activeView === 'map' ? 'Map' : activeView === 'explore' ? 'Impact' : activeView === 'dao' ? 'Local Board' : 'Profile'}
           </h1>
           <div className="mobile-presence-badge">
             <span className="presence-dot"></span>
@@ -991,29 +1007,51 @@ export default function App() {
               showToast={showToast}
             />
 
-            {/* Filter tab bar */}
+            {/* Track Filter */}
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '12px' }}>
+              <TrackSelector 
+                value={trackFilter} 
+                onChange={(t) => setTrackFilter(t as 'all' | 'civic' | 'gig' | 'project')} 
+                showAll={true} 
+              />
+              <select 
+                className="standard-input" 
+                value={selectedProvince} 
+                onChange={(e) => setSelectedProvince(e.target.value)}
+                style={{ background: 'var(--surface-color)', color: 'var(--text-main)', padding: '6px 12px', minWidth: '130px', height: '40px' }}
+              >
+                <option value="all">All Provinces</option>
+                <option value="Eastern Cape">Eastern Cape</option>
+                <option value="Free State">Free State</option>
+                <option value="Gauteng">Gauteng</option>
+                <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                <option value="Limpopo">Limpopo</option>
+                <option value="Mpumalanga">Mpumalanga</option>
+                <option value="North West">North West</option>
+                <option value="Northern Cape">Northern Cape</option>
+                <option value="Western Cape">Western Cape</option>
+              </select>
+            </div>
+
+            {/* Status Filter tabs */}
             <div className="civic-filter-bar">
-              <button className={`civic-filter-btn ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>All Issues</button>
-              <button className={`civic-filter-btn ${statusFilter === 'active' ? 'active' : ''}`} onClick={() => setStatusFilter('active')}>📢 Reported</button>
+              <button className={`civic-filter-btn ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>All</button>
+              <button className={`civic-filter-btn ${statusFilter === 'active' ? 'active' : ''}`} onClick={() => setStatusFilter('active')}>📢 Open</button>
               <button className={`civic-filter-btn ${statusFilter === 'in_progress' ? 'active' : ''}`} onClick={() => setStatusFilter('in_progress')}>🛠 In Progress</button>
-              <button className={`civic-filter-btn ${statusFilter === 'resolved' ? 'active' : ''}`} onClick={() => setStatusFilter('resolved')}>🟢 Awaiting Audit</button>
+              <button className={`civic-filter-btn ${statusFilter === 'resolved' ? 'active' : ''}`} onClick={() => setStatusFilter('resolved')}>🟢 Audit</button>
             </div>
             
             {!feedReady && (
               <div className="feed-skeleton">
-                <div className="skeleton-card">
-                  <div className="skel skel-line" style={{ height: '40px', borderRadius: '20px' }}></div>
-                </div>
-                <div className="skeleton-card">
-                  <div className="skel skel-line" style={{ height: '80px' }}></div>
-                </div>
+                <div className="skeleton-card"><div className="skel skel-line" style={{ height: '40px', borderRadius: '20px' }}></div></div>
+                <div className="skeleton-card"><div className="skel skel-line" style={{ height: '80px' }}></div></div>
               </div>
             )}
 
             <div className="feed-container">
               {filteredPosts.length === 0 && feedReady ? (
                 <div className="widget-card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No reported issues matching this filter.
+                  No posts matching this filter.
                 </div>
               ) : (
                 filteredPosts.map(post => (
@@ -1036,10 +1074,10 @@ export default function App() {
                     onVerifyFix={handleVerifyFix}
                     onBackProject={handleBackProject}
                     userWalletBalance={walletBalance}
-                    onShowOnMap={(postId) => {
-                      setMapActivePostId(postId);
-                      setActiveView('map');
-                    }}
+                    onShowOnMap={(postId) => { setMapActivePostId(postId); setActiveView('map'); }}
+                    onApplyForGig={handleApplyForGig}
+                    onAcceptApplicant={handleAcceptApplicant}
+                    onOpenViralShare={(post) => setViralSharePost(post)}
                   />
                 ))
               )}
@@ -1051,105 +1089,40 @@ export default function App() {
         {activeView === 'map' && (
           <section className="view active" style={{ height: 'calc(100vh - 125px)', minHeight: '500px', display: 'flex', flexDirection: 'column', padding: '10px 12px' }}>
             <div style={{ flex: 1, position: 'relative' }}>
-              <CivicMap 
-                posts={posts} 
-                activePostId={mapActivePostId} 
-                onViewPost={(postId) => {
-                  setPendingHighlight(postId);
-                  setActiveView('home');
-                }}
-              />
+              <CivicMap posts={posts} activePostId={mapActivePostId} onViewPost={(postId) => { setPendingHighlight(postId); setActiveView('home'); }} />
             </div>
           </section>
         )}
 
-        {/* View Explore / Stats */}
+        {/* View Explore / Impact Dashboard */}
         {activeView === 'explore' && (
           <section className="view active">
             <div className="search-box">
               <Search className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Search by street, suburb, fixer, category..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoComplete="off" 
-              />
+              <input type="text" placeholder="Search by street, suburb, fixer, category..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoComplete="off" />
             </div>
 
             {searchQuery.length > 0 ? (
               <div className="feed-container">
                 {filteredPosts.map(post => (
                   <PostCard 
-                    key={post.id}
-                    post={post}
-                    uid={uid}
-                    currentUserName={user}
-                    isCurrentUserFixer={isFixer}
-                    onToggleReaction={handleToggleReaction}
-                    onAddComment={handleAddComment}
-                    onDeletePost={handleDeletePost}
-                    showToast={showToast}
-                    isHighlighted={pendingHighlight === post.id}
-                    userReputation={reputation}
-                    onFlagPost={handleFlagPost}
-                    onVoteCourt={handleVoteCourt}
-                    onClaimGig={handleClaimGig}
-                    onSubmitFix={handleSubmitFix}
-                    onVerifyFix={handleVerifyFix}
-                    onBackProject={handleBackProject}
-                    userWalletBalance={walletBalance}
-                    onShowOnMap={(postId) => {
-                      setMapActivePostId(postId);
-                      setActiveView('map');
-                    }}
+                    key={post.id} post={post} uid={uid} currentUserName={user}
+                    isCurrentUserFixer={isFixer} onToggleReaction={handleToggleReaction}
+                    onAddComment={handleAddComment} onDeletePost={handleDeletePost}
+                    showToast={showToast} isHighlighted={pendingHighlight === post.id}
+                    userReputation={reputation} onFlagPost={handleFlagPost}
+                    onVoteCourt={handleVoteCourt} onClaimGig={handleClaimGig}
+                    onSubmitFix={handleSubmitFix} onVerifyFix={handleVerifyFix}
+                    onBackProject={handleBackProject} userWalletBalance={walletBalance}
+                    onShowOnMap={(postId) => { setMapActivePostId(postId); setActiveView('map'); }}
+                    onApplyForGig={handleApplyForGig}
+                    onAcceptApplicant={handleAcceptApplicant}
+                    onOpenViralShare={(post) => setViralSharePost(post)}
                   />
                 ))}
               </div>
             ) : (
-              <div className="explore-grid">
-                <div className="widget-card">
-                  <h3 className="widget-title">Active Categories</h3>
-                  <div className="trending-list">
-                    {trendingTags.length > 0 ? (
-                      trendingTags.map(trend => (
-                        <div 
-                          key={trend.tag} 
-                          className="trending-item" 
-                          onClick={() => handleTrendClick(trend.tag)}
-                        >
-                          <span className="trend-tag" style={{ textTransform: 'capitalize' }}>
-                            {trend.tag.replace('_', ' ')}
-                          </span>
-                          <span className="trend-count">{trend.count} reports</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No reports yet.</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="widget-card">
-                  <h3 className="widget-title">Platform Impact</h3>
-                  <div className="stat-row">
-                    <span>Total Issues Reported</span>
-                    <strong>{stats.totalPosts}</strong>
-                  </div>
-                  <div className="stat-row">
-                    <span>Active Repair Jobs</span>
-                    <strong>{activeFixesCount}</strong>
-                  </div>
-                  <div className="stat-row">
-                    <span>Upvote Confirmations</span>
-                    <strong>{stats.totalReactions}</strong>
-                  </div>
-                  <div className="stat-row">
-                    <span>Active Community Members</span>
-                    <strong>{stats.activeUsers}</strong>
-                  </div>
-                </div>
-              </div>
+              <ImpactDashboard posts={posts} onlineCount={onlineCount} />
             )}
           </section>
         )}
@@ -1158,15 +1131,10 @@ export default function App() {
         {activeView === 'dao' && (
           <section className="view active">
             <DaoPanel 
-              uid={uid}
-              username={user}
-              reputation={reputation}
-              reputationsMap={reputationsMap}
-              proposals={proposals}
-              flaggedPosts={flaggedPosts}
-              onCreateProposal={handleCreateProposal}
-              onVoteOnProposal={handleVoteOnProposal}
-              onVoteCourt={handleVoteCourt}
+              uid={uid} username={user} reputation={reputation}
+              reputationsMap={reputationsMap} proposals={proposals}
+              flaggedPosts={flaggedPosts} onCreateProposal={handleCreateProposal}
+              onVoteOnProposal={handleVoteOnProposal} onVoteCourt={handleVoteCourt}
               showToast={showToast}
             />
           </section>
@@ -1176,20 +1144,15 @@ export default function App() {
         {activeView === 'profile' && (
           <section className="view active">
             <div className="profile-header">
-              <div className="profile-avatar user-avatar" style={userAvatarStyle}>
-                {initials}
-              </div>
+              <div className="profile-avatar user-avatar" style={userAvatarStyle}>{initials}</div>
               <h2>{user}</h2>
               <p className="profile-sub">
                 Status: <strong>{isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}</strong>
               </p>
-              <div className="mobile-footer-links">
-                <a href="policy.html">Privacy Policy & Terms</a>
-              </div>
+              <div className="mobile-footer-links"><a href="policy.html">Privacy Policy & Terms</a></div>
             </div>
 
             {user !== 'Guest' && !isEditingProfile ? (
-              // Logged In Profile Dashboard View
               <div className="profile-dashboard widget-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', textAlign: 'center' }}>
                   <div className="stat-card" style={{ padding: '16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'rgba(255, 255, 255, 0.01)' }}>
@@ -1202,94 +1165,58 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Per-track stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
+                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(29, 155, 240, 0.03)' }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-primary)' }}>{profileStats.civicReported}</span>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Civic</span>
+                  </div>
+                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(245, 158, 11, 0.03)' }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>{profileStats.gigsPosted}</span>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Gigs</span>
+                  </div>
+                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.03)' }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-success)' }}>{profileStats.projectsLaunched}</span>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projects</span>
+                  </div>
+                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.02)' }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800 }}>{profileStats.backed}</span>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Backed</span>
+                  </div>
+                </div>
+
                 <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                  <button 
-                    className="btn-cancel" 
-                    style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }} 
-                    onClick={() => {
-                      setProfileNameInput(user);
-                      generateCaptcha();
-                      setIsEditingProfile(true);
-                    }}
-                  >
-                    Edit Profile
-                  </button>
-                  <button 
-                    className="btn-primary" 
-                    style={{ flex: 1, backgroundColor: 'var(--accent-danger)', color: 'white', justifyContent: 'center' }}
-                    onClick={handleLogout}
-                  >
-                    Log Out
-                  </button>
+                  <button className="btn-cancel" style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }} onClick={() => { setProfileNameInput(user); generateCaptcha(); setIsEditingProfile(true); }}>Edit Profile</button>
+                  <button className="btn-primary" style={{ flex: 1, backgroundColor: 'var(--accent-danger)', color: 'white', justifyContent: 'center' }} onClick={handleLogout}>Log Out</button>
                 </div>
               </div>
             ) : (
-              // Login / Sign Up Form View
               <div className="profile-settings widget-card" style={{ padding: '20px' }}>
                 <h3 className="widget-title" style={{ marginBottom: '16px' }}>
                   {user === 'Guest' ? 'Set Identity Dashboard' : 'Update Profile Identity'}
                 </h3>
                 <div className="form-group">
                   <label>Display Name / Username</label>
-                  <input 
-                    type="text" 
-                    maxLength={32}
-                    className="standard-input"
-                    placeholder="e.g. SiphoM" 
-                    value={profileNameInput}
-                    onChange={(e) => setProfileNameInput(e.target.value)}
-                  />
+                  <input type="text" maxLength={32} className="standard-input" placeholder="e.g. SiphoM" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} />
                 </div>
 
-                {/* Fixer Toggle */}
-                <div 
-                  className="fixer-checkbox-group" 
-                  onClick={() => setIsFixer(!isFixer)}
-                  style={{ cursor: 'pointer', border: '1px solid var(--border-color)', padding: '12px', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px' }}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={isFixer}
-                    onChange={() => {}} // handled by parent div click
-                  />
+                <div className="fixer-checkbox-group" onClick={() => setIsFixer(!isFixer)} style={{ cursor: 'pointer', border: '1px solid var(--border-color)', padding: '12px', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px' }}>
+                  <input type="checkbox" checked={isFixer} onChange={() => {}} />
                   <div style={{ textAlign: 'left' }}>
-                    <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                      Register as Local Fixer
-                    </strong>
+                    <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)' }}>Register as Local Fixer</strong>
                     <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Allowing you to claim repair gigs on the Civic Feed and earn simulated cash.
+                      Allowing you to claim repair gigs and apply for service gigs.
                     </span>
                   </div>
                 </div>
 
                 <div className="captcha-box" style={{ marginTop: '20px' }}>
                   <label>Human Check: What is {captchaNum1} + {captchaNum2}?</label>
-                  <input 
-                    type="number" 
-                    className="standard-input" 
-                    placeholder="Answer"
-                    value={captchaAnswerInput}
-                    onChange={(e) => setCaptchaAnswerInput(e.target.value)}
-                    style={{ marginTop: '8px' }}
-                  />
+                  <input type="number" className="standard-input" placeholder="Answer" value={captchaAnswerInput} onChange={(e) => setCaptchaAnswerInput(e.target.value)} style={{ marginTop: '8px' }} />
                 </div>
                 <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                  {user !== 'Guest' && (
-                    <button 
-                      className="btn-cancel" 
-                      style={{ flex: 1 }} 
-                      onClick={() => setIsEditingProfile(false)}
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  <button 
-                    className="btn-primary" 
-                    style={{ flex: 1, justifyContent: 'center' }} 
-                    onClick={handleSaveProfile}
-                  >
-                    Save Identity
-                  </button>
+                  {user !== 'Guest' && (<button className="btn-cancel" style={{ flex: 1 }} onClick={() => setIsEditingProfile(false)}>Cancel</button>)}
+                  <button className="btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleSaveProfile}>Save Identity</button>
                 </div>
               </div>
             )}
@@ -1308,7 +1235,7 @@ export default function App() {
                 <strong style={{ fontSize: '1.2rem', color: 'var(--accent-success)' }}>R{earnings}</strong>
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                Earn money by claiming repair jobs on the feed, completing the repairs, and getting verified by 3 neighbors.
+                Earn by claiming civic repairs, applying for gigs, or completing project milestones.
               </p>
             </div>
           </div>
@@ -1319,14 +1246,8 @@ export default function App() {
           <div className="trending-list">
             {trendingTags.length > 0 ? (
               trendingTags.map(trend => (
-                <div 
-                  key={trend.tag} 
-                  className="trending-item" 
-                  onClick={() => handleTrendClick(trend.tag)}
-                >
-                  <span className="trend-tag" style={{ textTransform: 'capitalize' }}>
-                    {trend.tag.replace('_', ' ')}
-                  </span>
+                <div key={trend.tag} className="trending-item" onClick={() => handleTrendClick(trend.tag)}>
+                  <span className="trend-tag" style={{ textTransform: 'capitalize' }}>{trend.tag.replace('_', ' ')}</span>
                   <span className="trend-count">{trend.count} reports</span>
                 </div>
               ))
@@ -1337,12 +1258,13 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Toast Notification Container */}
-      <Toast 
-        message={toast.message} 
-        type={toast.type} 
-        show={toast.show} 
-      />
+      {/* Viral Share Modal */}
+      {viralSharePost && (
+        <ViralCard post={viralSharePost} onClose={() => setViralSharePost(null)} />
+      )}
+
+      {/* Toast Notification */}
+      <Toast message={toast.message} type={toast.type} show={toast.show} />
     </div>
   );
 }

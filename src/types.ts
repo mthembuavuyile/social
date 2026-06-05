@@ -6,6 +6,16 @@ export interface Comment {
   timestamp: number;
 }
 
+export interface Milestone {
+  id: string;
+  title: string;
+  targetAmount: number;
+  description: string;
+  completed: boolean;
+  proofUrl?: string;
+  approvedBy?: Record<string, boolean>;
+}
+
 export interface Post {
   id: string;
   content: string; // Issue description
@@ -19,9 +29,17 @@ export interface Post {
   comments?: Record<string, Comment>;
   flags?: Record<string, boolean>;
   
-  // UbuntuFix Civic & Gig Fields
+  // ===== Track System =====
+  // 'civic' = Track 2 (pothole, water leak, fallen tree — community crowdfunded repair)
+  // 'gig'   = Track 1 (private 1-to-1 service — fix my shower, build my website)
+  // 'project' = Track 3 (large community crowdfunding — soccer field, school windows)
+  postTrack?: 'civic' | 'gig' | 'project';
+
+  // UbuntuFix Civic Fields (Track: civic)
   category?: 'pothole' | 'water_leak' | 'electricity' | 'sewage' | 'traffic_light' | 'other';
   location?: string;
+  province?: string;
+  city?: string;
   status?: 'active' | 'approved' | 'in_progress' | 'resolved' | 'burned' | 'jury' | 'resolved_complete';
   compensationValue?: number; // Simulated payout (in Rands)
   assignedFixerUid?: string;
@@ -35,7 +53,7 @@ export interface Post {
   courtVotesKeep?: Record<string, boolean>;
   courtVotesBurn?: Record<string, boolean>;
 
-  // Crowdfunding fields
+  // Crowdfunding fields (used by civic + project tracks)
   isCrowdfunded?: boolean;
   bountyGoal?: number;
   bountyRaised?: number;
@@ -44,6 +62,18 @@ export interface Post {
   // Geolocation fields
   latitude?: number;
   longitude?: number;
+
+  // ===== Gig Track Fields (Track: gig) =====
+  gigCategory?: 'plumbing' | 'electrical' | 'cleaning' | 'web_dev' | 'tutoring' | 'gardening' | 'painting' | 'other_gig';
+  gigContactPhone?: string; // For WhatsApp redirect
+  gigPrice?: number; // Listed price in Rands
+  gigApplicants?: Record<string, { name: string; timestamp: number }>; // uid -> applicant info
+  gigAcceptedUid?: string;
+  gigAcceptedName?: string;
+
+  // ===== Project Track Fields (Track: project) =====
+  milestones?: Milestone[];
+  projectCategory?: 'infrastructure' | 'education' | 'sports' | 'health' | 'environment' | 'community' | 'other_project';
 }
 
 export interface Stat {
@@ -79,4 +109,3 @@ export interface DaoSettings {
   announcement: string;
   postingAllowed: boolean;
 }
-
