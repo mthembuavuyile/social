@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Only match files under the posts folder
+    match /posts/{allPaths=**} {
+      // Allow public read access to evidence photos so neighbors and fixers can view them
+      allow read: if true;
+      
+      // Allow writes (uploads) only if the user is authenticated (including anonymous auth),
+      // the file is an image, and the file size is under 5MB to prevent abuse.
+      allow write: if request.auth != null 
+                   && request.resource.size < 5 * 1024 * 1024 
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

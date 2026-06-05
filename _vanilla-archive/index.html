@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <title>NexysNet — Connect. Share. Vibe.</title>
+  <meta name="title" content="NexysNet — Connect. Share. Vibe.">
+  <meta name="description"
+    content="Join NexysNet, the next-generation social platform. Connect with friends, share your thoughts, and vibe with a global community in real-time.">
+  <meta name="keywords" content="NexysNet, social media, networking, Vylex, connect, South Africa tech">
+  <meta name="author" content="Vylex">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vylex.co.za/portfolio/nexys-social/">
+  <meta property="og:title" content="NexysNet — Connect. Share. Vibe.">
+  <meta property="og:description"
+    content="The ultimate social vibe. Share posts, trending tags, and connect with users instantly on NexysNet.">
+  <meta property="og:image" content="https://vylex.co.za/portfolio/nexys-social/assets/og-image.jpg">
+
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://vylex.co.za/portfolio/nexys-social/">
+  <meta property="twitter:title" content="NexysNet — Connect. Share. Vibe.">
+  <meta property="twitter:description"
+    content="The ultimate social vibe. Share posts, trending tags, and connect with users instantly on NexysNet.">
+  <meta property="twitter:image" content="https://vylex.co.za/portfolio/nexys-social/assets/og-image.jpg">
+
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+
+<body>
+
+  <div class="ambient-blob blob-1"></div>
+  <div class="ambient-blob blob-2"></div>
+
+  <div class="app-container">
+
+    <nav class="app-nav">
+      <div class="nav-brand">
+        <div class="logo-mark">N</div>
+        <span class="logo-text">NexysNet</span>
+      </div>
+      <div class="nav-links">
+        <button class="nav-btn active" data-target="home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+          <span>Home</span>
+        </button>
+        <button class="nav-btn" data-target="explore">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span>Explore</span>
+        </button>
+        <button class="nav-btn" data-target="profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>Profile</span>
+        </button>
+      </div>
+      <div class="nav-user-status hidden-mobile">
+        <div class="online-pill">
+          <div class="online-dot"></div>
+          <span id="navOnlineCount">0 online</span>
+        </div>
+      </div>
+    </nav>
+
+    <main class="app-main">
+
+      <header class="mobile-header">
+        <div class="logo-mark" style="width: 28px; height: 28px; font-size: 0.8rem;">N</div>
+        <h1 id="mobilePageTitle">Home</h1>
+        <div class="online-pill" style="padding: 4px 8px; font-size: 0.7rem;">
+          <div class="online-dot"></div>
+          <span id="mobileOnlineCount">0</span>
+        </div>
+      </header>
+
+      <section id="view-home" class="view active">
+        <div class="composer">
+          <div class="composer-top">
+            <div class="user-avatar current-user-avatar">??</div>
+            <textarea id="composeInput" class="compose-input" placeholder="What's on your mind?" rows="1"></textarea>
+          </div>
+          <div class="composer-extras" id="composeExtras">
+            <div class="extras-inputs">
+              <input type="url" id="postImageURL" placeholder="🖼 Image URL (optional)" />
+              <input type="text" id="postTags" placeholder="🏷 Tags: #tech #news" />
+            </div>
+            <div class="composer-footer">
+              <span class="char-counter"><span id="charCount">500</span> left</span>
+              <div class="composer-actions">
+                <button class="btn-cancel" id="cancelPostBtn">Cancel</button>
+                <button class="btn-primary" id="submitPostBtn" disabled>Post</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="feedSkeleton" class="feed-skeleton">
+          <div class="skeleton-card">
+            <div class="skel skel-line" style="height:40px; border-radius: 20px;"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skel skel-line" style="height:80px;"></div>
+          </div>
+        </div>
+
+        <div id="postsContainer" class="feed-container"></div>
+      </section>
+
+      <section id="view-explore" class="view">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input type="text" id="searchInput" placeholder="Search posts, tags, or people..." autocomplete="off" />
+        </div>
+
+        <div class="explore-grid" id="exploreGrid">
+          <div class="widget-card">
+            <h3 class="widget-title">Trending Tags</h3>
+            <div id="exploreTrendingList" class="trending-list">Loading trends...</div>
+          </div>
+
+          <div class="widget-card">
+            <h3 class="widget-title">Platform Stats</h3>
+            <div class="stat-row"><span>Total Posts</span><strong id="statTotalPosts">—</strong></div>
+            <div class="stat-row"><span>Total Reactions</span><strong id="statTotalReactions">—</strong></div>
+            <div class="stat-row"><span>Active Users</span><strong id="statActiveUsers">—</strong></div>
+          </div>
+
+        </div>
+      </section>
+
+      <section id="view-profile" class="view">
+        <div class="profile-header">
+          <div class="profile-avatar current-user-avatar" id="profileBigAvatar">??</div>
+          <h2 id="profileNameDisplay">Guest User</h2>
+          <p class="profile-sub">Update your identity below to start interacting.</p>
+          <div class="mobile-footer-links">
+            <a href="policy.html">Privacy Policy & Terms</a>
+          </div>
+        </div>
+
+        <div class="profile-settings widget-card">
+          <h3 class="widget-title">Set Username</h3>
+          <div class="form-group">
+            <label>Username (min 3 chars)</label>
+            <input type="text" id="userNameInput" placeholder="e.g. PixelWizard" maxlength="32"
+              class="standard-input" />
+          </div>
+          <div class="captcha-box">
+            <label id="captchaQuestion">Human check: 3 + 7?</label>
+            <input type="number" id="captchaAnswer" placeholder="Answer" class="standard-input" />
+          </div>
+          <button class="btn-primary full-width" id="saveUserBtn">Save Profile</button>
+        </div>
+      </section>
+
+    </main>
+
+    <aside class="app-sidebar hidden-mobile">
+      <div class="widget-card">
+        <h3 class="widget-title">Trending Now</h3>
+        <div id="sidebarTrendingList" class="trending-list">Loading trends...</div>
+    </aside>
+
+  </div>
+
+  <div id="toast" class="toast">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastMessage">Message here</span>
+  </div>
+
+  <template id="post-template">
+    <article class="post-card">
+      <div class="post-header">
+        <div class="post-author-info">
+          <div class="user-avatar" data-author-initials></div>
+          <div class="post-meta">
+            <span class="post-author-name" data-author-name></span>
+            <span class="post-time" data-timestamp></span>
+          </div>
+        </div>
+        <button class="btn-icon delete-btn" data-action="delete" title="Delete Post">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+          </svg>
+        </button>
+      </div>
+      <div class="post-tags" data-post-tags></div>
+      <div class="post-content" data-post-content></div>
+      <img class="post-image" data-post-image alt="Attached Image" />
+
+      <div class="post-actions-bar">
+        <button class="action-btn" data-action="toggle-reactions">
+          <span data-reaction-emoji>🤍</span> <span data-reaction-count>0</span>
+        </button>
+        <button class="action-btn" data-action="toggle-comments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+          <span data-comment-count>0</span>
+        </button>
+        <button class="action-btn share-btn" data-action="toggle-share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="panel reactions-panel" data-reactions-panel></div>
+
+      <div class="panel share-panel" data-share-panel>
+        <input type="text" class="standard-input" readonly data-share-link />
+        <button class="btn-primary" data-action="copy-share-link">Copy</button>
+      </div>
+
+      <div class="panel comments-section" data-comments-section>
+        <div class="comments-list" data-comments-container></div>
+        <div class="comment-composer">
+          <div class="user-avatar comment-avatar" data-current-user-initials></div>
+          <textarea class="standard-input" data-comment-input placeholder="Write a comment..." rows="1"></textarea>
+          <button class="btn-primary btn-small" data-action="add-comment">Send</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
