@@ -16,10 +16,11 @@ export function useAuth() {
     
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
-        const savedName = localStorage.getItem('ubuntuUserName') || 'Citizen';
+        // Use Firebase Auth displayName as the single source of truth.
+        // Falls back to 'Citizen' for new anonymous users.
         setUser({
           uid: currentUser.uid,
-          displayName: currentUser.displayName || savedName
+          displayName: currentUser.displayName || 'Citizen'
         });
       } else {
         setUser(null);
@@ -32,9 +33,12 @@ export function useAuth() {
 
   const updateUserName = async (name: string) => {
     if (auth.currentUser) {
-      await updateProfile(auth.currentUser, { displayName: name });
-      localStorage.setItem('ubuntuUserName', name);
-      setUser(prev => prev ? { ...prev, displayName: name } : null);
+      // Sanitize: trim and enforce max length
+      const sanitizedName = name.trim().slice(0, 50);
+      if (!sanitizedName) return;
+
+      await updateProfile(auth.currentUser, { displayName: sanitizedName });
+      setUser(prev => prev ? { ...prev, displayName: sanitizedName } : null);
     }
   };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
 import { Post } from '../types';
 
@@ -55,8 +55,17 @@ export function usePosts() {
     await updateDoc(postRef, { status });
   };
   
-  const deletePost = async (postId: string) => {
+  const deletePost = async (postId: string, currentUserUid: string) => {
+    // Defense-in-depth: verify ownership client-side before attempting delete.
+    // Firestore rules also enforce this, but this prevents unnecessary failed requests.
     const postRef = doc(dbFirestore, 'posts', postId);
+    const snap = await getDoc(postRef);
+    if (!snap.exists()) {
+      throw new Error('Post not found.');
+    }
+    if (snap.data()?.authorUid !== currentUserUid) {
+      throw new Error('You can only delete your own posts.');
+    }
     await deleteDoc(postRef);
   };
 

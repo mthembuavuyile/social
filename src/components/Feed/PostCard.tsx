@@ -103,8 +103,8 @@ export const PostCard: React.FC<PostCardProps> = ({
         <img src={post.imageUrl} alt="Issue" style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }} />
       )}
 
-      {/* Admin/Status Controls */}
-      {user && (
+      {/* Status Controls — restricted to post owner */}
+      {isOwner && (
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', padding: '8px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
           <button 
             onClick={() => onUpdateStatus(post.id, 'active')} 

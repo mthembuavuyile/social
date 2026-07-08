@@ -76,11 +76,16 @@ export default function App() {
   };
 
   const handleSaveProfile = async () => {
-    if (!profileNameInput.trim()) {
+    const trimmedName = profileNameInput.trim();
+    if (!trimmedName) {
       showToast('Name cannot be empty', 'error');
       return;
     }
-    await updateUserName(profileNameInput.trim());
+    if (trimmedName.length > 50) {
+      showToast('Name must be under 50 characters', 'error');
+      return;
+    }
+    await updateUserName(trimmedName);
     showToast('Profile updated!', 'success');
   };
 
@@ -129,7 +134,9 @@ export default function App() {
                     post={post}
                     user={user}
                     onToggleReaction={handleToggleReaction}
-                    onDeletePost={deletePost}
+                    onDeletePost={(postId) => {
+                      if (user) deletePost(postId, user.uid);
+                    }}
                     onUpdateStatus={updatePostStatus}
                   />
                 ))
@@ -146,7 +153,12 @@ export default function App() {
               <input 
                 type="text" 
                 value={profileNameInput} 
-                onChange={(e) => setProfileNameInput(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value.length <= 50) {
+                    setProfileNameInput(e.target.value);
+                  }
+                }}
+                maxLength={50}
                 style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-main)' }}
               />
             </div>
