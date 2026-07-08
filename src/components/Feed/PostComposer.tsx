@@ -1,15 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { getInitials, getUserColor } from '../../utils';
-import { Camera, X, Send, MapPin, Loader2 } from 'lucide-react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../firebase';
+import { Image, X, Send, MapPin, Loader2, Link } from 'lucide-react';
 
 const MAX_CONTENT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 200;
 const MAX_CITY_LENGTH = 100;
-const MAX_FILE_SIZE_MB = 5;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_IMAGE_URL_LENGTH = 1000;
 
 interface PostComposerProps {
   user: { uid: string; displayName: string } | null;
@@ -39,19 +35,17 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
   const [isLocating, setIsLocating] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Local preview for uploaded file (before submission)
-  const [imagePreview, setImagePreview] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  // Image URL instead of file upload
+  const [imageUrl, setImageUrl] = useState('');
+  const [imagePreviewError, setImagePreviewError] = useState(false);
 
   const handleFocus = () => setIsExpanded(true);
 
   const handleCancel = () => {
     setContent('');
-    setImagePreview('');
-    setUploadedFile(null);
+    setImageUrl('');
+    setImagePreviewError(false);
     setLocation('');
     setProvince('Gauteng');
     setCity('');
@@ -59,21 +53,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
     setLatitude(undefined);
     setLongitude(undefined);
     setIsExpanded(false);
-  };
-
-  const uploadImageToStorage = async (file: File): Promise<string> => {
-    if (!user) throw new Error('Must be authenticated to upload.');
-
-    // Generate a unique path: posts/{userId}/{timestamp}_{filename}
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storagePath = `posts/${user.uid}/${Date.now()}_${sanitizedName}`;
-    const storageRef = ref(storage, storagePath);
-
-    await uploadBytes(storageRef, file, {
-      contentType: file.type,
-    });
-
-    return getDownloadURL(storageRef);
   };
 
   const handlePost = async () => {
@@ -96,15 +75,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
 
     setIsPosting(true);
     try {
-      // Upload image to Firebase Storage if a file was selected
-      let finalImageUrl = '';
-      if (uploadedFile) {
-        finalImageUrl = await uploadImageToStorage(uploadedFile);
-      }
-
       await onSubmitPost({
         content: trimmedContent,
-        imageUrl: finalImageUrl,
+        imageUrl: imageUrl.trim(),
         category,
         location: trimmedLoc,
         province,
@@ -145,50 +118,16 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
     );
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      showToast('Only JPEG, PNG, GIF, and WebP images are allowed.', 'error');
-      return;
-    }
-
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      showToast(`Image must be under ${MAX_FILE_SIZE_MB}MB.`, 'error');
-      return;
-    }
-
-    // Store the file for later upload, and create a local preview
-    setUploadedFile(file);
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setImagePreview(event.target?.result as string);
-      setIsUploading(false);
-    };
-    reader.onerror = () => {
-      showToast('Failed to read file', 'error');
-      setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleRemoveImage = () => {
-    setImagePreview('');
-    setUploadedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    setImageUrl('');
+    setImagePreviewError(false);
   };
 
   const initials = getInitials(user?.displayName || 'Citizen');
   const [c1, c2] = getUserColor(user?.displayName || 'Citizen');
   const avatarStyle = { background: `linear-gradient(135deg, ${c1}, ${c2})` };
 
-  const currentPreview = imagePreview;
+  const hasValidImageUrl = imageUrl.trim().length > 0 && !imagePreviewError;
 
   return (
     <div className="composer">
@@ -215,10 +154,15 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
         </div>
       )}
 
-      {isExpanded && currentPreview && (
+      {isExpanded && hasValidImageUrl && (
         <div className="image-preview-wrapper" style={{ marginTop: '10px', position: 'relative' }}>
-          <img src={currentPreview} alt="Preview" style={{ maxWidth: '100%', borderRadius: '8px' }} />
-          <button type="button" className="remove-preview-btn" onClick={handleRemoveImage} style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', padding: '4px' }}>
+          <img
+            src={imageUrl.trim()}
+            alt="Preview"
+            style={{ maxWidth: '100%', borderRadius: '8px' }}
+            onError={() => setImagePreviewError(true)}
+          />
+          <button type="button" className="remove-preview-btn" onClick={handleRemoveImage} style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}>
             <X size={14} />
           </button>
         </div>
@@ -270,7 +214,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
                 maxLength={MAX_LOCATION_LENGTH}
                 style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
               />
-              <button type="button" onClick={handleDetectLocation} disabled={isLocating} style={{ padding: '8px 12px', borderRadius: '4px', background: 'var(--accent-primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button type="button" onClick={handleDetectLocation} disabled={isLocating} style={{ padding: '8px 12px', borderRadius: '4px', background: 'var(--accent-primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                 {isLocating ? <Loader2 className="animate-spin" size={14} /> : <MapPin size={14} />}
                 GPS
               </button>
@@ -295,21 +239,38 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
           </div>
 
           <div className="form-group">
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Photo Evidence</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading} style={{ padding: '8px 16px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                {isUploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />}
-                {uploadedFile ? 'Change Photo' : 'Upload Photo'}
-              </button>
-              {uploadedFile && (
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-                  {uploadedFile.name} ({(uploadedFile.size / 1024 / 1024).toFixed(1)}MB)
-                </span>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Photo Evidence (Image URL)</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Link size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <input
+                  type="url"
+                  className="standard-input"
+                  placeholder="https://example.com/photo.jpg"
+                  value={imageUrl}
+                  onChange={(e) => {
+                    if (e.target.value.length <= MAX_IMAGE_URL_LENGTH) {
+                      setImageUrl(e.target.value);
+                      setImagePreviewError(false);
+                    }
+                  }}
+                  maxLength={MAX_IMAGE_URL_LENGTH}
+                  style={{ width: '100%', padding: '8px 8px 8px 32px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+              {imageUrl.trim() && (
+                <button type="button" onClick={handleRemoveImage} style={{ padding: '8px', borderRadius: '4px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <X size={14} />
+                </button>
               )}
             </div>
+            {imagePreviewError && imageUrl.trim() && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', marginTop: '4px', marginBottom: 0 }}>
+                ⚠ Could not load image. Check the URL is a direct link to an image.
+              </p>
+            )}
             <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
-              Accepted: JPEG, PNG, GIF, WebP — Max {MAX_FILE_SIZE_MB}MB
+              Paste a direct link to an image (JPEG, PNG, GIF, WebP)
             </p>
           </div>
         </div>
