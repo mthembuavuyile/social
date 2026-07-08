@@ -90,9 +90,7 @@ export const CivicMap: React.FC<CivicMapProps> = ({
       bounds.push([post.latitude, post.longitude]);
 
       const categoryLabel = post.category ? post.category.replace('_', ' ').toUpperCase() : 'CIVIC ISSUE';
-      const bountyText = post.isCrowdfunded 
-        ? `Bounty: R${post.bountyRaised || 0} / R${post.bountyGoal || 500}`
-        : `Payout: R${post.compensationValue || 150}`;
+      const bountyText = '';
       
       const statusLabels: Record<string, string> = {
         active: '🔴 Reported',
