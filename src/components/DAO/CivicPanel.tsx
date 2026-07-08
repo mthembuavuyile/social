@@ -10,16 +10,18 @@ import {
   ThumbsDown, 
   Clock, 
   Check, 
-  MapPin 
+  MapPin,
+  Megaphone
 } from 'lucide-react';
 
-interface DaoPanelProps {
+interface CivicPanelProps {
   uid: string | null;
   username: string;
   reputation: number;
   reputationsMap: Record<string, number>;
   proposals: Proposal[];
   flaggedPosts: Post[];
+  isCouncillor?: boolean;
   onCreateProposal: (
     title: string,
     description: string,
@@ -32,43 +34,65 @@ interface DaoPanelProps {
   showToast: (msg: string, type?: 'info' | 'success' | 'error') => void;
 }
 
-export const DaoPanel: React.FC<DaoPanelProps> = ({
+export const CivicPanel: React.FC<CivicPanelProps> = ({
   uid,
   username,
   reputation,
   reputationsMap,
   proposals,
   flaggedPosts,
+  isCouncillor = false,
   onCreateProposal,
   onVoteOnProposal,
   onVoteCourt,
   showToast,
 }) => {
-  const [activeTab, setActiveTab] = useState<'proposals' | 'court' | 'leaderboard'>('proposals');
+  const [activeTab, setActiveTab] = useState<'petitions' | 'audits' | 'leaderboard'>('petitions');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [propType, setPropType] = useState<'setting' | 'text'>('setting');
-  const [settingKey] = useState<'announcement'>('announcement');
+  const [propType, setPropType] = useState<'setting' | 'text'>('text');
   const [settingValue, setSettingValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Councillor specific banner state
+  const [councillorNotice, setCouncillorNotice] = useState('');
+  const [isUpdatingNotice, setIsUpdatingNotice] = useState(false);
+
+  const handleSubmitNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!councillorNotice.trim()) return;
+    setIsUpdatingNotice(true);
+    try {
+      // Re-use proposal logic with auto-execute to post councillor updates instantly
+      await onCreateProposal(
+        `Ward Announcement: ${councillorNotice.substring(0, 40)}...`,
+        councillorNotice.trim(),
+        'setting',
+        'announcement',
+        councillorNotice.trim()
+      );
+      setCouncillorNotice('');
+      showToast('Notice Board updated successfully!', 'success');
+    } catch (err) {
+      showToast('Failed to update Notice Board', 'error');
+    } finally {
+      setIsUpdatingNotice(false);
+    }
+  };
+
+  const handleSubmitPetition = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uid) {
       showToast('Please set your username first.', 'error');
       return;
     }
     if (reputation < 10) {
-      showToast('Requires at least 10 Ubuntu Points to propose.', 'error');
+      showToast('Requires at least 10 Civic Trust Points to launch a petition.', 'error');
       return;
     }
     if (!title.trim() || !description.trim()) {
       showToast('Title and description are required.', 'error');
-      return;
-    }
-    if (propType === 'setting' && !settingValue.trim()) {
-      showToast('Setting value is required.', 'error');
       return;
     }
 
@@ -78,21 +102,21 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
         title.trim(),
         description.trim(),
         propType,
-        propType === 'setting' ? settingKey : undefined,
+        propType === 'setting' ? 'announcement' : undefined,
         propType === 'setting' ? settingValue.trim() : undefined
       );
       setTitle('');
       setDescription('');
       setSettingValue('');
       setShowCreateForm(false);
+      showToast('Community petition launched!', 'success');
     } catch (err) {
-      showToast('Failed to create proposal.', 'error');
+      showToast('Failed to create petition.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Sort leaderboards descending
   const leaderboard = Object.entries(reputationsMap)
     .map(([userUid, rep]) => ({ uid: userUid, rep }))
     .sort((a, b) => b.rep - a.rep)
@@ -101,96 +125,124 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
   return (
     <div className="dao-panel">
       <div className="dao-header">
-        <h2>Local Board</h2>
-        <p className="profile-sub">You hold the power to shape the community. Start community polls, vote on settings, and review disputed repair jobs.</p>
+        <h2>Civic Hub & Ward Coordination</h2>
+        <p className="profile-sub">
+          Coordinate local repairs, launch neighbor petitions, and audit community initiatives.
+        </p>
       </div>
+
+      {/* Councillor Notice Console */}
+      {isCouncillor && (
+        <div className="widget-card councillor-banner" style={{ border: '1px solid var(--accent-secondary)', background: 'rgba(245, 158, 11, 0.02)', marginBottom: '20px' }}>
+          <h3 className="widget-title" style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Megaphone size={16} /> Councillor Notice Board Console
+          </h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Publish official announcements directly to the top notice board for all neighbors in your ward.
+          </p>
+          <form onSubmit={handleSubmitNotice} style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+            <textarea
+              className="standard-input"
+              rows={2}
+              placeholder="e.g. Scheduled water maintenance in Suburb X on Thursday between 08:00 and 16:00."
+              value={councillorNotice}
+              onChange={e => setCouncillorNotice(e.target.value)}
+              required
+            />
+            <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-end', background: 'var(--accent-secondary)' }} disabled={isUpdatingNotice}>
+              {isUpdatingNotice ? 'Publishing...' : 'Publish Update'}
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="dao-tabs">
         <button 
-          className={`dao-tab-btn ${activeTab === 'proposals' ? 'active' : ''}`}
-          onClick={() => setActiveTab('proposals')}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          className={`dao-tab-btn ${activeTab === 'petitions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('petitions')}
         >
-          <FileText size={15} /> Community Polls
+          <FileText size={15} /> Citizen Petitions
         </button>
         <button 
-          className={`dao-tab-btn ${activeTab === 'court' ? 'active' : ''}`}
-          onClick={() => setActiveTab('court')}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          className={`dao-tab-btn ${activeTab === 'audits' ? 'active' : ''}`}
+          onClick={() => setActiveTab('audits')}
         >
-          <Scale size={15} /> Community Review ({flaggedPosts.length})
+          <Scale size={15} /> Civic Audits ({flaggedPosts.length})
         </button>
         <button 
           className={`dao-tab-btn ${activeTab === 'leaderboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <Trophy size={15} /> Top Contributors
+          <Trophy size={15} /> Leaderboard
         </button>
       </div>
 
-      {activeTab === 'proposals' && (
+      {activeTab === 'petitions' && (
         <div className="dao-grid">
           <div className="widget-card" style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h3 className="widget-title" style={{ marginBottom: '4px' }}>Community Initiatives & Settings</h3>
+                <h3 className="widget-title" style={{ marginBottom: '4px' }}>Citizen Petitions & Initiatives</h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Submit setting changes or community initiatives. Costs <strong>10 Ubuntu Points</strong>.
+                  Start a community petition. Costs <strong>10 Civic Trust Points</strong>.
                 </p>
               </div>
               <button 
                 className="btn-primary" 
                 onClick={() => setShowCreateForm(!showCreateForm)}
               >
-                {showCreateForm ? 'Cancel' : <><Plus size={14} /> New Poll</>}
+                {showCreateForm ? 'Cancel' : <><Plus size={14} /> New Petition</>}
               </button>
             </div>
 
             {showCreateForm && (
-              <form onSubmit={handleSubmit} className="new-proposal-form" style={{ marginTop: '20px' }}>
+              <form onSubmit={handleSubmitPetition} className="new-proposal-form" style={{ marginTop: '20px' }}>
                 <div className="form-group">
-                  <label>Poll Title</label>
+                  <label>Petition Title</label>
                   <input 
                     type="text" 
                     className="standard-input" 
-                    placeholder="e.g. Set global announcement to Loadshedding Block 4 update"
+                    placeholder="e.g. Install speed bumps on Main Street"
                     value={title} 
                     onChange={e => setTitle(e.target.value)}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>Description</label>
+                  <label>Detail / Proposal Description</label>
                   <textarea 
                     className="standard-input" 
                     rows={3} 
-                    placeholder="Explain how this benefits the neighborhood..."
+                    placeholder="Describe the issue, proposed solution, and why neighbors should support this..."
                     value={description} 
                     onChange={e => setDescription(e.target.value)}
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Type</label>
-                  <select 
-                    className="standard-input" 
-                    value={propType} 
-                    onChange={e => setPropType(e.target.value as 'setting' | 'text')}
-                    style={{ background: 'var(--surface-color)', color: 'var(--text-main)', padding: '10px' }}
-                  >
-                    <option value="setting">Setting Change (Auto-Executable)</option>
-                    <option value="text">General Announcement / Suggestion</option>
-                  </select>
-                </div>
-
-                {propType === 'setting' && (
+                
+                {/* For average users, they create text-only initiatives. Councillors can make settings banner overrides. */}
+                {isCouncillor && (
                   <div className="form-group">
-                    <label>New Announcement Text</label>
+                    <label>Poll Type</label>
+                    <select 
+                      className="standard-input" 
+                      value={propType} 
+                      onChange={e => setPropType(e.target.value as 'setting' | 'text')}
+                      style={{ background: 'var(--surface-color)', color: 'var(--text-main)', padding: '10px' }}
+                    >
+                      <option value="text">General Discussion / Petition</option>
+                      <option value="setting">System Banner Alert (Auto-Executable)</option>
+                    </select>
+                  </div>
+                )}
+
+                {propType === 'setting' && isCouncillor && (
+                  <div className="form-group">
+                    <label>New Banner Alert Text</label>
                     <input 
                       type="text" 
                       className="standard-input" 
-                      placeholder="Type announcement..."
+                      placeholder="e.g. Loadshedding suspended until 16:00..."
                       value={settingValue}
                       onChange={e => setSettingValue(e.target.value)}
                       required
@@ -199,7 +251,7 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                 )}
 
                 <button type="submit" className="btn-primary full-width" disabled={isSubmitting || reputation < 10}>
-                  {isSubmitting ? 'Submitting...' : 'Submit (Costs 10 Ubuntu Points)'}
+                  {isSubmitting ? 'Launching...' : 'Launch Petition (Costs 10 Points)'}
                 </button>
               </form>
             )}
@@ -207,7 +259,7 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
 
           <div className="proposal-list">
             {proposals.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No proposals submitted yet.</p>
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No active petitions yet.</p>
             ) : (
               [...proposals].sort((a, b) => {
                 if (a.status === 'active' && b.status !== 'active') return -1;
@@ -229,11 +281,11 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                     <div className="proposal-header">
                       <div>
                         <span className={`proposal-badge ${proposal.status}`}>
-                          {proposal.status}
+                          {proposal.status === 'active' ? 'Active Poll' : proposal.status === 'passed' ? 'Supported' : 'Archived'}
                         </span>
                         {proposal.type === 'setting' && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginLeft: '8px', border: '1px solid var(--border-color)', padding: '2px 6px', borderRadius: '4px' }}>
-                            Setting: {proposal.settingKey}
+                          <span style={{ fontSize: '0.7rem', color: 'var(--accent-secondary)', marginLeft: '8px', border: '1px solid var(--border-color)', padding: '2px 6px', borderRadius: '4px' }}>
+                            Official Notice
                           </span>
                         )}
                       </div>
@@ -248,13 +300,13 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
 
                     {proposal.type === 'setting' && proposal.status === 'passed' && (
                       <div style={{ background: 'rgba(16, 185, 129, 0.04)', border: '1px dashed var(--accent-success)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-success)', marginBottom: '12px' }}>
-                        ⚙️ Executed: Changed {proposal.settingKey} to "{proposal.settingValue}"
+                        📢 Notice Updated: "{proposal.settingValue}"
                       </div>
                     )}
 
                     {proposal.status === 'defeated' && (
-                      <div style={{ background: 'rgba(239, 68, 68, 0.04)', border: '1px dashed var(--accent-danger)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-danger)', marginBottom: '12px' }}>
-                        ❌ Defeated: Not enough support. {totalVotes === 0 ? '(10 Points Refunded)' : ''}
+                      <div style={{ background: 'rgba(244, 63, 94, 0.04)', border: '1px dashed var(--accent-danger)', padding: '10px', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--accent-danger)', marginBottom: '12px' }}>
+                        Closed: Insufficient support.
                       </div>
                     )}
 
@@ -285,8 +337,8 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                     </div>
 
                     <div className="proposal-meta-row">
-                      <span>By: {proposal.creator}</span>
-                      <span>Votes (Weight): {totalVotes}</span>
+                      <span>Proposed by: {proposal.creator}</span>
+                      <span>Total voters weight: {totalVotes}</span>
                     </div>
                   </div>
                 );
@@ -296,19 +348,19 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
         </div>
       )}
 
-      {activeTab === 'court' && (
+      {activeTab === 'audits' && (
         <div className="court-view">
           <div className="widget-card" style={{ marginBottom: '20px' }}>
             <h3 className="widget-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Scale size={16} /> Neighbor Dispute Reviews
+              <Scale size={16} /> Civic Quality Audits
             </h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              When a repair is submitted but disputed by the community, it comes here for review. Neighbors with <strong>≥40 Ubuntu Points</strong> vote to accept or reject the fixer's work.
+              When a repair proof is submitted but flagged by neighbors, it is held for review. Neighbors with <strong>≥40 Civic Trust Points</strong> audit the fix proof to accept or reject the job.
             </p>
           </div>
 
           {flaggedPosts.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No active disputes to review.</p>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '24px' }}>No active quality audits under review.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {flaggedPosts.map(post => {
@@ -320,18 +372,18 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                   <div key={post.id} className="proposal-item" style={{ borderLeft: '4px solid var(--accent-danger)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <strong>Fixer: {post.assignedFixerName || 'Unknown'}</strong>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Case #{post.id.substring(0, 5)}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Audit Case #{post.id.substring(0, 5)}</span>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.01)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '14px', border: '1px solid var(--border-color)' }}>
-                      <strong style={{ display: 'block', marginBottom: '4px' }}>Issue Description:</strong>
+                      <strong style={{ display: 'block', marginBottom: '4px' }}>Civic Report Content:</strong>
                       <p style={{ color: 'var(--text-muted)', marginBottom: '8px' }}>"{post.content}"</p>
                       <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
                         <MapPin size={12} /> Location: {post.location}
                       </div>
                       {post.fixImageUrl && (
                         <div style={{ marginTop: '10px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Fixer Proof Image:</span>
-                          <img src={post.fixImageUrl} alt="Fix proof" style={{ display: 'block', width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Proof of Fix:</span>
+                          <img src={post.fixImageUrl} alt="Proof of fix" style={{ display: 'block', width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
                         </div>
                       )}
                     </div>
@@ -343,7 +395,7 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                         disabled={!uid || reputation < 40 || !!hasVoted}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                       >
-                        <Check size={14} /> Accept Fix ({keeps} / 3)
+                        <Check size={14} /> Accept Repair ({keeps} / 3)
                       </button>
                       <button 
                         className="court-btn court-btn-burn"
@@ -351,13 +403,13 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                         disabled={!uid || reputation < 40 || !!hasVoted}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                       >
-                        <AlertTriangle size={14} /> Reject Fix ({burns} / 3)
+                        <AlertTriangle size={14} /> Reject Proof ({burns} / 3)
                       </button>
                     </div>
 
                     {uid && reputation < 40 && (
                       <p style={{ fontSize: '0.7rem', color: 'var(--accent-danger)', textAlign: 'center', marginTop: '6px' }}>
-                        Requires ≥40 Ubuntu Points to participate (You have {reputation}).
+                        Requires ≥40 Civic Trust Points to audit (You have {reputation}).
                       </p>
                     )}
                   </div>
@@ -371,9 +423,11 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
       {activeTab === 'leaderboard' && (
         <div className="widget-card">
           <h3 className="widget-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Trophy size={16} /> Ubuntu Leaderboard
+            <Trophy size={16} /> Civic Contributors
           </h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px' }}>Top contributors who earn Ubuntu Points by verifying and repairing civic infrastructure.</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+            Top active neighbors who report issues, verify repairs, and help their community.
+          </p>
 
           <div className="leaderboard-list">
             {leaderboard.map((user, idx) => {
@@ -405,7 +459,7 @@ export const DaoPanel: React.FC<DaoPanelProps> = ({
                   <div className="leaderboard-user">
                     <span style={{ width: '24px' }}>{medal || `#${idx + 1}`}</span>
                     <span style={{ fontFamily: 'var(--font-heading)' }}>
-                      {isCurrentUser ? `${username} (You)` : `Citizen_${user.uid.substring(0, 6)}`}
+                      {isCurrentUser ? `${username} (You)` : `Neighbor_${user.uid.substring(0, 6)}`}
                     </span>
                   </div>
                   <strong>{user.rep} Pts</strong>

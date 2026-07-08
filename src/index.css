@@ -1,35 +1,35 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  /* Twitter "Lights Out" Dark Mode Theme */
-  --bg-color: #000000;
-  --surface-color: #000000;
-  --surface-hover: #080808;
-  --card-bg: #000000;
-  --widget-bg: #16181c; /* Twitter search/sidebar background */
-  --widget-hover: #202327;
-  --border-color: #2f3336; /* Twitter border color */
-  --border-glow: #1d9bf0;
-  --text-main: #e7e9ea; /* Twitter primary text */
-  --text-muted: #71767b; /* Twitter secondary text */
-  --text-dark: #536471;
+  /* Premium Civic Slate Theme (Obsidian, Forest Emerald & Warm Amber) */
+  --bg-color: #080c14;
+  --surface-color: #0f1422;
+  --surface-hover: #171d2f;
+  --card-bg: #0f1422;
+  --widget-bg: #141a2a;
+  --widget-hover: #1c2439;
+  --border-color: #1e263d;
+  --border-glow: #10b981;
+  --text-main: #f8fafc;
+  --text-muted: #8b9bb4;
+  --text-dark: #64748b;
   
-  --accent-primary: #1d9bf0; /* Twitter Blue */
-  --accent-secondary: #f91880; /* Twitter Pink/Heart */
-  --accent-success: #00ba7c; /* Twitter Green */
-  --accent-danger: #f4212e; /* Twitter Red */
-  --accent-info: #1d9bf0;
+  --accent-primary: #10b981; /* Civic Emerald Green */
+  --accent-secondary: #f59e0b; /* Attention Gold / Warm Accent */
+  --accent-success: #10b981; /* Success Emerald */
+  --accent-danger: #f43f5e; /* Coral Red */
+  --accent-info: #3b82f6; /* Trust Blue */
   
-  --font-heading: 'Inter', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
   
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;
   
-  --nav-width: 250px;
-  --sidebar-width: 350px;
-  --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --nav-width: 260px;
+  --sidebar-width: 360px;
+  --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * { 
@@ -61,7 +61,7 @@ body {
   font-family: var(--font-heading);
   border-radius: 8px; /* Elegant squircle shape */
   background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-  box-shadow: 0 2px 8px rgba(29, 155, 240, 0.25);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
   transition: var(--transition-smooth);
   user-select: none;
 }
@@ -1593,7 +1593,7 @@ body {
   cursor: pointer;
   transition: var(--transition-smooth);
   position: relative;
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
 }
 .track-selector-btn:not(:last-child) {
   border-right: 1px solid var(--border-color);
@@ -1667,7 +1667,7 @@ body {
 
 /* Track-specific active colors */
 .track-selector-btn.active[data-track="civic"] {
-  background: rgba(29, 155, 240, 0.12);
+  background: rgba(16, 185, 129, 0.12);
   color: var(--accent-primary);
 }
 .track-selector-btn.active[data-track="civic"]::after {
@@ -1683,11 +1683,11 @@ body {
 }
 
 .track-selector-btn.active[data-track="project"] {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--accent-success);
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent-info);
 }
 .track-selector-btn.active[data-track="project"]::after {
-  background: var(--accent-success);
+  background: var(--accent-info);
 }
 
 .track-selector-btn.active[data-track="all"] {
@@ -1703,28 +1703,89 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: 99px;
   font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-family: var(--font-heading);
+  font-weight: 700;
+  font-family: var(--font-body);
 }
 .track-badge-civic {
-  background: rgba(29, 155, 240, 0.1);
+  background: rgba(16, 185, 129, 0.08);
   color: var(--accent-primary);
-  border: 1px solid rgba(29, 155, 240, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 .track-badge-gig {
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(245, 158, 11, 0.08);
   color: #f59e0b;
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
 .track-badge-project {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent-info);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Status Badges with Dots */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  border: 1px solid transparent;
+}
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.status-open {
+  background: rgba(245, 158, 11, 0.05);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.15);
+}
+.status-open .status-dot {
+  background-color: #f59e0b;
+  box-shadow: 0 0 4px #f59e0b;
+}
+.status-progress {
+  background: rgba(59, 130, 246, 0.05);
+  color: var(--accent-info);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+.status-progress .status-dot {
+  background-color: var(--accent-info);
+  box-shadow: 0 0 4px var(--accent-info);
+}
+.status-audit {
+  background: rgba(139, 92, 246, 0.05);
+  color: #8b5cf6;
+  border-color: rgba(139, 92, 246, 0.15);
+}
+.status-audit .status-dot {
+  background-color: #8b5cf6;
+  box-shadow: 0 0 4px #8b5cf6;
+}
+.status-completed {
+  background: rgba(16, 185, 129, 0.05);
   color: var(--accent-success);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+.status-completed .status-dot {
+  background-color: var(--accent-success);
+  box-shadow: 0 0 4px var(--accent-success);
+}
+.status-disputed {
+  background: rgba(244, 63, 94, 0.05);
+  color: var(--accent-danger);
+  border-color: rgba(244, 63, 94, 0.15);
+}
+.status-disputed .status-dot {
+  background-color: var(--accent-danger);
+  box-shadow: 0 0 4px var(--accent-danger);
 }
 
 /* Gig Category Badges */

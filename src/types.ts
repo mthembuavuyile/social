@@ -30,34 +30,34 @@ export interface Post {
   flags?: Record<string, boolean>;
   
   // ===== Track System =====
-  // 'civic' = Track 2 (pothole, water leak, fallen tree — community crowdfunded repair)
-  // 'gig'   = Track 1 (private 1-to-1 service — fix my shower, build my website)
-  // 'project' = Track 3 (large community crowdfunding — soccer field, school windows)
+  // 'civic' = Track 2 (pothole, water leak, fallen tree — community co-funded/reported repair)
+  // 'gig'   = Track 1 (private service — fix my shower, build my website)
+  // 'project' = Track 3 (large community initiative — soccer field restoration, school library)
   postTrack?: 'civic' | 'gig' | 'project';
 
-  // UbuntuFix Civic Fields (Track: civic)
+  // UbuntuFix Civic & Community Fields
   category?: 'pothole' | 'water_leak' | 'electricity' | 'sewage' | 'traffic_light' | 'other';
   location?: string;
   province?: string;
   city?: string;
-  status?: 'active' | 'approved' | 'in_progress' | 'resolved' | 'burned' | 'jury' | 'resolved_complete';
-  compensationValue?: number; // Simulated payout (in Rands)
+  status?: 'active' | 'approved' | 'in_progress' | 'resolved' | 'burned' | 'jury' | 'resolved_complete'; // 'jury' = under audit review, 'burned' = archived/spam
+  compensationValue?: number; // Simulated payout in Rands (ZAR)
   assignedFixerUid?: string;
   assignedFixerName?: string;
-  fixImageUrl?: string; // After photo URL
+  fixImageUrl?: string; // After photo URL (proof of fix)
   fixCompletedAt?: number;
-  verifications?: Record<string, boolean>;
-  disputes?: Record<string, boolean>;
+  verifications?: Record<string, boolean>; // neighbor sign-offs
+  disputes?: Record<string, boolean>; // dispute flags trigger audit
   
-  // Legacy community court voting
-  courtVotesKeep?: Record<string, boolean>;
-  courtVotesBurn?: Record<string, boolean>;
+  // Civic audit details (represented in DB as legacy court votes for compatibility)
+  courtVotesKeep?: Record<string, boolean>; // audit votes to ACCEPT fix
+  courtVotesBurn?: Record<string, boolean>; // audit votes to REJECT/FINE fix
 
   // Crowdfunding fields (used by civic + project tracks)
   isCrowdfunded?: boolean;
   bountyGoal?: number;
   bountyRaised?: number;
-  backers?: Record<string, number>; // uid -> amount
+  backers?: Record<string, number>; // uid -> ZAR amount
 
   // Geolocation fields
   latitude?: number;
@@ -65,9 +65,9 @@ export interface Post {
 
   // ===== Gig Track Fields (Track: gig) =====
   gigCategory?: 'plumbing' | 'electrical' | 'cleaning' | 'web_dev' | 'tutoring' | 'gardening' | 'painting' | 'other_gig';
-  gigContactPhone?: string; // For WhatsApp redirect
-  gigPrice?: number; // Listed price in Rands
-  gigApplicants?: Record<string, { name: string; timestamp: number }>; // uid -> applicant info
+  gigContactPhone?: string; // WhatsApp integration
+  gigPrice?: number; // Budget in Rands (ZAR)
+  gigApplicants?: Record<string, { name: string; timestamp: number }>; // applicant roster
   gigAcceptedUid?: string;
   gigAcceptedName?: string;
 
@@ -87,6 +87,7 @@ export interface Trend {
   count: number;
 }
 
+// Re-framed as Community Petition or Poll
 export interface Proposal {
   id: string;
   title: string;
@@ -94,12 +95,12 @@ export interface Proposal {
   creator: string;
   creatorUid: string;
   timestamp: number;
-  type: 'setting' | 'text';
+  type: 'setting' | 'text'; // setting represents dynamic banner updates
   settingKey?: 'announcement';
   settingValue?: string;
   status: 'active' | 'passed' | 'defeated';
-  votesFor?: Record<string, number>; // uid -> reputation weight
-  votesAgainst?: Record<string, number>; // uid -> reputation weight
+  votesFor?: Record<string, number>; // uid -> rating weight
+  votesAgainst?: Record<string, number>; // uid -> rating weight
   totalVotesFor: number;
   totalVotesAgainst: number;
   endTime: number;
@@ -109,3 +110,4 @@ export interface DaoSettings {
   announcement: string;
   postingAllowed: boolean;
 }
+

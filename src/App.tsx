@@ -28,7 +28,7 @@ import { PostCard } from './components/Feed/PostCard';
 import { PostComposer } from './components/Feed/PostComposer';
 import { TrackSelector } from './components/Feed/TrackSelector';
 import { Toast } from './components/Layout/Toast';
-import { DaoPanel } from './components/DAO/DaoPanel';
+import { CivicPanel } from './components/DAO/CivicPanel';
 import { CivicMap } from './components/Map/CivicMap';
 import { ImpactDashboard } from './components/Impact/ImpactDashboard';
 import { ViralCard } from './components/Share/ViralCard';
@@ -47,6 +47,7 @@ export default function App() {
   const [user, setUser] = useState('Guest');
   const [uid, setUid] = useState<string | null>(null);
   const [isFixer, setIsFixer] = useState(false);
+  const [isCouncillor, setIsCouncillor] = useState(false);
   const [earnings, setEarnings] = useState<number>(0);
   const [walletBalance, setWalletBalance] = useState<number>(500);
   const [mapActivePostId, setMapActivePostId] = useState<string | null>(null);
@@ -122,6 +123,10 @@ export default function App() {
       const savedIsFixer = localStorage.getItem('ubuntuIsFixer');
       if (savedIsFixer) {
         setIsFixer(savedIsFixer === 'true');
+      }
+      const savedIsCouncillor = localStorage.getItem('ubuntuIsCouncillor');
+      if (savedIsCouncillor) {
+        setIsCouncillor(savedIsCouncillor === 'true');
       }
     });
 
@@ -881,6 +886,7 @@ export default function App() {
 
     localStorage.setItem('ubuntuUserName', name);
     localStorage.setItem('ubuntuIsFixer', String(isFixer));
+    localStorage.setItem('ubuntuIsCouncillor', String(isCouncillor));
     setUser(name);
     setIsEditingProfile(false);
     showToast(`Dashboard updated, ${name}!`, 'success');
@@ -891,8 +897,9 @@ export default function App() {
     if (!confirm('Are you sure you want to log out?')) return;
     localStorage.removeItem('ubuntuUserName');
     localStorage.removeItem('ubuntuIsFixer');
+    localStorage.removeItem('ubuntuIsCouncillor');
     localStorage.removeItem('nexysUserName');
-    setUser('Guest'); setProfileNameInput(''); setIsFixer(false); setIsEditingProfile(false);
+    setUser('Guest'); setProfileNameInput(''); setIsFixer(false); setIsCouncillor(false); setIsEditingProfile(false);
     showToast('Logged out.', 'info');
   };
 
@@ -925,7 +932,7 @@ export default function App() {
             <Compass /><span>Impact</span>
           </button>
           <button className={`nav-btn ${activeView === 'dao' ? 'active' : ''}`} onClick={() => setActiveView('dao')}>
-            <Shield /><span>Local Board</span>
+            <Shield /><span>Civic Hub</span>
           </button>
           <button className={`nav-btn ${activeView === 'profile' ? 'active' : ''}`} onClick={() => setActiveView('profile')}>
             <User /><span>Profile</span>
@@ -938,7 +945,7 @@ export default function App() {
                 <div className="profile-card-avatar" style={userAvatarStyle}>{initials}</div>
                 <div className="profile-card-info">
                   <span className="profile-card-name">{user}</span>
-                  <span className="profile-card-role">{isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}</span>
+                  <span className="profile-card-role">{isCouncillor ? '🏛 Ward Councillor' : isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}</span>
                 </div>
               </div>
 
@@ -963,7 +970,7 @@ export default function App() {
         <header className="mobile-header">
           <div className="logo-mark mobile-logo">U</div>
           <h1 id="mobilePageTitle">
-            {activeView === 'home' ? 'Feed' : activeView === 'map' ? 'Map' : activeView === 'explore' ? 'Impact' : activeView === 'dao' ? 'Local Board' : 'Profile'}
+            {activeView === 'home' ? 'Feed' : activeView === 'map' ? 'Map' : activeView === 'explore' ? 'Impact' : activeView === 'dao' ? 'Civic Hub' : 'Profile'}
           </h1>
           <div className="mobile-presence-badge">
             <span className="presence-dot"></span>
@@ -1108,13 +1115,14 @@ export default function App() {
           </section>
         )}
 
-        {/* View DAO Governance */}
+        {/* View Civic Hub */}
         {activeView === 'dao' && (
           <section className="view active">
-            <DaoPanel 
+            <CivicPanel 
               uid={uid} username={user} reputation={reputation}
               reputationsMap={reputationsMap} proposals={proposals}
-              flaggedPosts={flaggedPosts} onCreateProposal={handleCreateProposal}
+              flaggedPosts={flaggedPosts} isCouncillor={isCouncillor}
+              onCreateProposal={handleCreateProposal}
               onVoteOnProposal={handleVoteOnProposal} onVoteCourt={handleVoteCourt}
               showToast={showToast}
             />
@@ -1128,7 +1136,7 @@ export default function App() {
               <div className="profile-avatar user-avatar" style={userAvatarStyle}>{initials}</div>
               <h2>{user}</h2>
               <p className="profile-sub">
-                Status: <strong>{isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}</strong>
+                Status: <strong>{isCouncillor ? '🏛 Ward Councillor' : isFixer ? '🛠 Local Fixer' : '🏡 Active Neighbor'}</strong>
               </p>
               <div className="mobile-footer-links"><a href="policy.html">Privacy Policy & Terms</a></div>
             </div>
@@ -1137,18 +1145,18 @@ export default function App() {
               <div className="profile-dashboard widget-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', textAlign: 'center' }}>
                   <div className="stat-card" style={{ padding: '16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'rgba(255, 255, 255, 0.01)' }}>
-                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Ubuntu Points</span>
-                    <strong style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>{reputation}</strong>
+                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Civic Trust Score</span>
+                    <strong style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>{reputation} Pts</strong>
                   </div>
                   <div className="stat-card" style={{ padding: '16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', background: 'rgba(255, 255, 255, 0.01)' }}>
-                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Simulated Earnings</span>
-                    <strong style={{ fontSize: '1.5rem', color: 'var(--accent-success)' }}>R{earnings}</strong>
+                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Simulated Wallet</span>
+                    <strong style={{ fontSize: '1.5rem', color: 'var(--accent-success)' }}>R{walletBalance}</strong>
                   </div>
                 </div>
 
                 {/* Per-track stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', textAlign: 'center' }}>
-                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(29, 155, 240, 0.03)' }}>
+                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.03)' }}>
                     <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-primary)' }}>{profileStats.civicReported}</span>
                     <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Civic</span>
                   </div>
@@ -1156,8 +1164,8 @@ export default function App() {
                     <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>{profileStats.gigsPosted}</span>
                     <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Gigs</span>
                   </div>
-                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.03)' }}>
-                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-success)' }}>{profileStats.projectsLaunched}</span>
+                  <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(59, 130, 246, 0.03)' }}>
+                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-info)' }}>{profileStats.projectsLaunched}</span>
                     <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projects</span>
                   </div>
                   <div style={{ padding: '10px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', background: 'rgba(255, 255, 255, 0.02)' }}>
@@ -1181,12 +1189,22 @@ export default function App() {
                   <input type="text" maxLength={32} className="standard-input" placeholder="e.g. SiphoM" value={profileNameInput} onChange={(e) => setProfileNameInput(e.target.value)} />
                 </div>
 
-                <div className="fixer-checkbox-group" onClick={() => setIsFixer(!isFixer)} style={{ cursor: 'pointer', border: '1px solid var(--border-color)', padding: '12px', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px' }}>
+                <div className="fixer-checkbox-group" onClick={() => setIsFixer(!isFixer)} style={{ cursor: 'pointer', border: '1px solid var(--border-color)', padding: '12px', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '12px', alignItems: 'center', marginTop: '12px' }}>
                   <input type="checkbox" checked={isFixer} onChange={() => {}} />
                   <div style={{ textAlign: 'left' }}>
                     <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)' }}>Register as Local Fixer</strong>
                     <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Allowing you to claim repair gigs and apply for service gigs.
+                      Allows you to claim community repairs and bid on local handymen gigs.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="fixer-checkbox-group" onClick={() => setIsCouncillor(!isCouncillor)} style={{ cursor: 'pointer', border: '1px solid var(--border-color)', padding: '12px', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '12px', alignItems: 'center', marginTop: '12px' }}>
+                  <input type="checkbox" checked={isCouncillor} onChange={() => {}} />
+                  <div style={{ textAlign: 'left' }}>
+                    <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)' }}>Register as Ward Councillor</strong>
+                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      Allows you to publish emergency and service updates directly to the Notice Board.
                     </span>
                   </div>
                 </div>

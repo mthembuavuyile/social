@@ -16,7 +16,6 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   Camera, 
-  Check,
   Loader2,
   Phone,
   ExternalLink,
@@ -226,15 +225,38 @@ export const PostCard: React.FC<PostCardProps> = ({
     health: '🏥 Health', environment: '🌿 Environment', community: '🤝 Community', other_project: '🌍 Other',
   };
   const trackBadgeLabels: Record<string, string> = {
-    civic: '🤝 Civic', gig: '🔧 Gig', project: '🌍 Project',
+    civic: 'Civic', gig: 'Gig', project: 'Project',
   };
 
-  // Burned post
+  const getStatusBadge = () => {
+    const s = post.status || 'active';
+    if (track === 'gig') {
+      if (s === 'resolved_complete') return { label: 'Completed', color: 'status-completed' };
+      if (s === 'in_progress') return { label: 'Assigned', color: 'status-progress' };
+      if (s === 'jury') return { label: 'Disputed', color: 'status-disputed' };
+      return { label: 'Open', color: 'status-open' };
+    }
+    if (track === 'project') {
+      if (s === 'resolved_complete') return { label: 'Completed', color: 'status-completed' };
+      if (s === 'resolved' || s === 'in_progress') return { label: 'In Progress', color: 'status-progress' };
+      return { label: 'Funding', color: 'status-open' };
+    }
+    // Civic
+    if (s === 'resolved_complete') return { label: 'Resolved', color: 'status-completed' };
+    if (s === 'resolved') return { label: 'Under Audit', color: 'status-audit' };
+    if (s === 'in_progress') return { label: 'Repairing', color: 'status-progress' };
+    if (s === 'jury') return { label: 'Audit Disputed', color: 'status-disputed' };
+    return { label: 'Open', color: 'status-open' };
+  };
+
+  const statusBadge = getStatusBadge();
+
+  // Archived/Flagged/Spam post
   if (post.status === 'burned') {
     return (
       <article className="post-card" style={{ padding: '24px', textAlign: 'center', opacity: 0.6 }}>
         <p style={{ color: 'var(--accent-danger)', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>
-          🔥 Report marked as Spam/Fake by community vote #DAO-{post.id.substring(0, 5)}
+          🚫 Report archived as spam or incorrect location #AUDIT-{post.id.substring(0, 5)}
         </p>
       </article>
     );
@@ -244,28 +266,6 @@ export const PostCard: React.FC<PostCardProps> = ({
   const dispCount = Object.keys(post.disputes || {}).length;
   const hasVotedAudit = uid && (post.verifications?.[uid] || post.disputes?.[uid]);
 
-  // Stepper (for civic track)
-  const getSteps = (status?: string) => [
-    { label: 'Reported', completed: true, active: status === 'active' },
-    { label: 'Approved', completed: status !== 'active', active: status === 'approved' },
-    { label: 'In Progress', completed: !['active', 'approved'].includes(status || ''), active: status === 'in_progress' },
-    { label: 'Audit', completed: !['active', 'approved', 'in_progress'].includes(status || ''), active: status === 'resolved' || status === 'jury' },
-    { label: 'Resolved', completed: status === 'resolved_complete', active: status === 'resolved_complete' },
-  ];
-
-  // Gig stepper
-  const getGigSteps = (post: Post) => [
-    { label: 'Posted', completed: true, active: post.status === 'active' },
-    { label: 'Applicants', completed: Object.keys(post.gigApplicants || {}).length > 0, active: post.status === 'active' && Object.keys(post.gigApplicants || {}).length > 0 },
-    { label: 'Accepted', completed: !!post.gigAcceptedUid, active: !!post.gigAcceptedUid && post.status !== 'resolved_complete' },
-    { label: 'Complete', completed: post.status === 'resolved_complete', active: post.status === 'resolved_complete' },
-  ];
-
-  const steps = track === 'gig' ? getGigSteps(post) : getSteps(post.status);
-  const completedCount = steps.filter(s => s.completed).length;
-  const totalSteps = steps.length;
-  const progressWidth = `${((completedCount - 1) / (totalSteps - 1)) * 100}%`;
-
   const applicantCount = Object.keys(post.gigApplicants || {}).length;
   const hasApplied = uid && post.gigApplicants?.[uid];
   const isGigOwner = uid && post.authorUid === uid;
@@ -273,35 +273,20 @@ export const PostCard: React.FC<PostCardProps> = ({
   return (
     <article className={`post-card ${post.status === 'jury' ? 'jury-review' : ''}`} ref={cardRef}>
 
-      {/* Stepper (civic + gig) */}
-      {(track === 'civic' || track === 'gig') && (
-        <div className="status-stepper">
-          <div className="stepper-progress" style={{ width: progressWidth }}></div>
-          {steps.map((step, idx) => (
-            <div key={idx} className={`step-node ${step.completed ? 'completed' : ''} ${step.active ? 'active' : ''}`}>
-              <div className="step-circle">
-                {step.completed && !step.active && idx < totalSteps - 1 ? <Check size={12} strokeWidth={3} /> : idx + 1}
-              </div>
-              <span className="step-label">{step.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Court overlay for civic */}
+      {/* Audit overlay for civic */}
       {post.status === 'jury' && track === 'civic' && (
         <div className="court-overlay">
-          <div className="court-title"><AlertTriangle size={18} /> Community Court Trial</div>
-          <p className="court-desc">This repair has been disputed. High-reputation members (≥40 Ubuntu Points) vote Keep or Reject.</p>
+          <div className="court-title"><AlertTriangle size={18} /> Civic Quality Audit</div>
+          <p className="court-desc font-heading" style={{ fontSize: '0.8rem' }}>Neighbors flagged this repair as incomplete. High-trust neighbors (≥40 Points) review the fix proof.</p>
           <div className="court-actions">
             <button className="court-btn court-btn-keep" onClick={() => onVoteCourt(post.id, 'keep')} disabled={!uid || userReputation < 40 || !!post.courtVotesKeep?.[uid!] || !!post.courtVotesBurn?.[uid!]}>
-              Keep ({Object.keys(post.courtVotesKeep || {}).length})
+              Approve Fix ({Object.keys(post.courtVotesKeep || {}).length})
             </button>
             <button className="court-btn court-btn-burn" onClick={() => onVoteCourt(post.id, 'burn')} disabled={!uid || userReputation < 40 || !!post.courtVotesKeep?.[uid!] || !!post.courtVotesBurn?.[uid!]}>
-              Reject ({Object.keys(post.courtVotesBurn || {}).length})
+              Reject Fix ({Object.keys(post.courtVotesBurn || {}).length})
             </button>
           </div>
-          {uid && userReputation < 40 && (<p style={{ fontSize: '0.7rem', marginTop: '10px', color: 'var(--accent-danger)' }}>Requires ≥40 Ubuntu Points (You have {userReputation}).</p>)}
+          {uid && userReputation < 40 && (<p style={{ fontSize: '0.7rem', marginTop: '10px', color: 'var(--accent-danger)' }}>Requires ≥40 Civic Trust Points (You have {userReputation}).</p>)}
           {uid && (post.courtVotesKeep?.[uid] || post.courtVotesBurn?.[uid]) && (<p style={{ fontSize: '0.7rem', marginTop: '10px', color: 'var(--accent-success)' }}>Thank you for voting!</p>)}
         </div>
       )}
@@ -319,6 +304,11 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* Status Badge */}
+          <span className={`status-badge ${statusBadge.color}`}>
+            <span className="status-dot"></span>
+            {statusBadge.label}
+          </span>
           {/* Track Badge */}
           <span className={`track-badge track-badge-${track}`}>{trackBadgeLabels[track]}</span>
           {uid && post.authorUid !== uid && (
