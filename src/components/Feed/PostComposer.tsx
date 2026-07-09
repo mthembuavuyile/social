@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { getInitials, getUserColor } from '../../utils';
-import { Image, X, Send, MapPin, Loader2, Link } from 'lucide-react';
+import { X, Send, MapPin, Loader2, Link } from 'lucide-react';
 
 const MAX_CONTENT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 200;

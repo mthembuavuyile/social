@@ -1,5 +1,5 @@
 /**
- * UbuntuFix Civic Network - Secure Backend Cloud Functions
+ * Civicly Civic Network - Secure Backend Cloud Functions
  * 
  * In production, sensitive business logic (financial escrow payouts, dispute timeouts, 
  * reputation modifications, and vote verification) must run on a secure server environment 
@@ -60,7 +60,7 @@ exports.onPostUpdate = onDocumentUpdated("posts/{postId}", async (event) => {
         const currentEarnings = earningsDoc.exists() ? (earningsDoc.data().value || 0) : 0;
         transaction.set(fixerEarningsRef, { value: currentEarnings + payoutAmount }, { merge: true });
 
-        // Add +50 Reputation Points (Ubuntu Points) to fixer
+        // Add +50 Reputation Points (Civic Points) to fixer
         const repDoc = await transaction.get(fixerRepRef);
         const currentRep = repDoc.exists() ? (repDoc.data().value || 50) : 50;
         transaction.set(fixerRepRef, { value: currentRep + 50 }, { merge: true });

@@ -94,7 +94,7 @@ export default function App() {
       <nav className="main-nav" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-color)', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
           <AlertTriangle size={24} color="var(--accent-primary)" />
-          <h1 style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>UbuntuFix</h1>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>Civicly</h1>
         </div>
         <div style={{ display: 'flex', gap: '16px' }}>
           <button onClick={() => setActiveView('home')} style={{ background: 'transparent', border: 'none', color: activeView === 'home' ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
