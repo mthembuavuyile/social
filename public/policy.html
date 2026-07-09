@@ -198,9 +198,9 @@ footer a { color: var(--accent2); text-decoration: none; }
       <span class="section-num">01</span>
       <h2>Overview</h2>
     </div>
-    <p>Civicly is a real-time social platform that lets you share posts, react, and comment with others around the world. We believe in transparency, so this document clearly explains what data we collect, why, and how you can control it.</p>
+    <p>Civicly is a simple web platform that lets you report local civic issues and view them on an interactive map. We believe in transparency, so this document clearly explains what data we collect, why, and how you can control it.</p>
     <div class="callout info">
-      <strong>TL;DR:</strong> We don't sell your data. We collect only what's needed to run the platform. You can delete your posts anytime. Usernames are stored locally on your device.
+      <strong>TL;DR:</strong> We don't sell your data. We collect only what's needed to run the platform. You can delete your posts anytime. Usernames are stored in Firebase when you post.
     </div>
     <p>By using Civicly, you agree to the terms described in this document. If you do not agree, please discontinue use of the service.</p>
   </div>
@@ -213,10 +213,9 @@ footer a { color: var(--accent2); text-decoration: none; }
     <p>We aim to collect as little data as possible. Here's what is stored:</p>
     <ul>
       <li><strong>Anonymous User ID:</strong> Firebase assigns every visitor a unique anonymous identifier automatically. This is used to link your posts and reactions securely without requiring a traditional account.</li>
-      <li><strong>Username:</strong> Stored locally in your browser's <code>localStorage</code>. We also store it in Firebase when you post, react, or comment, attached to that content.</li>
-      <li><strong>Post Content:</strong> Text, optional image URLs, and tags you write and submit.</li>
-      <li><strong>Reactions & Comments:</strong> Your emoji reactions and comments, attributed to your anonymous UID.</li>
-      <li><strong>Presence Data:</strong> A temporary record that you're online, removed automatically when you disconnect.</li>
+      <li><strong>Username:</strong> Stored locally in your browser's <code>localStorage</code>. We also store it in Firebase when you post or react, attached to that content.</li>
+      <li><strong>Post Content:</strong> Text description, optional image URL, and location tags you write and submit.</li>
+      <li><strong>Reactions:</strong> Your emoji reactions (upvotes) to reported issues, attributed to your anonymous UID.</li>
       <li><strong>Basic Usage Data:</strong> Firebase may collect standard analytics like page views, device type, and geographic region via Google's infrastructure.</li>
     </ul>
     <div class="callout">
@@ -231,11 +230,9 @@ footer a { color: var(--accent2); text-decoration: none; }
     </div>
     <p>Data collected is used strictly to:</p>
     <ul>
-      <li>Display your posts, reactions, and comments to other users in real-time</li>
+      <li>Display your civic posts and upvotes on the feed and interactive map</li>
       <li>Enable you to delete your own posts and manage your contributions</li>
-      <li>Show accurate online user counts and trending topics</li>
       <li>Maintain platform stability and performance</li>
-      <li>Prevent spam and abuse through our CAPTCHA system</li>
     </ul>
     <p>We do <strong>not</strong> use your data for advertising, profiling, or sale to third parties.</p>
   </div>
@@ -262,7 +259,7 @@ footer a { color: var(--accent2); text-decoration: none; }
       <span class="section-num">05</span>
       <h2>User-Generated Content</h2>
     </div>
-    <p>All posts, comments, and reactions you publish on Civicly become publicly visible to all users of the platform. By posting, you agree that:</p>
+    <p>All posts and reactions you publish on Civicly become publicly visible to all users of the platform. By posting, you agree that:</p>
     <ul>
       <li>Your content may be seen by anyone with access to the platform</li>
       <li>You own the rights to any content you post</li>
@@ -279,9 +276,8 @@ footer a { color: var(--accent2); text-decoration: none; }
     </div>
     <p>We implement the following security measures:</p>
     <ul>
-      <li><strong>Firebase Security Rules:</strong> Database rules ensure users can only delete their own posts and comments.</li>
+      <li><strong>Firebase Security Rules:</strong> Database rules ensure users can only delete their own posts.</li>
       <li><strong>Anonymous Authentication:</strong> No personal credentials are stored. Firebase manages secure session tokens.</li>
-      <li><strong>CAPTCHA Verification:</strong> A simple math challenge prevents automated bot submissions.</li>
       <li><strong>HTTPS:</strong> All data transmitted between your browser and Firebase is encrypted in transit.</li>
     </ul>
     <div class="callout info">

@@ -1,11 +1,3 @@
-export interface Comment {
-  id?: string;
-  author: string;
-  authorUid: string;
-  text: string;
-  timestamp: number;
-}
-
 export interface Post {
   id: string;
   content: string; // Issue description

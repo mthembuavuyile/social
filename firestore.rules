@@ -45,64 +45,6 @@ service cloud.firestore {
         )
       );
 
-      // Comments Subcollection
-      match /comments/{commentId} {
-        allow read: if true;
-        allow create: if isAuthenticated()
-          && request.resource.data.authorUid == request.auth.uid
-          && isValidString(request.resource.data.text, 1000);
-        allow delete: if isAuthor(resource.data);
-        allow update: if isAuthor(resource.data)
-          && isValidString(request.resource.data.text, 1000);
-      }
-    }
-
-    // CRITICAL FIX: Financial collections — only Cloud Functions (Admin SDK) can write.
-    // The Admin SDK bypasses these rules, so `allow write: if false` blocks all
-    // client-side writes while still letting the onPostUpdate Cloud Function work.
-    match /reputations/{uid} {
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if false;
-    }
-
-    match /earnings/{uid} {
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if false;
-    }
-
-    match /wallets/{uid} {
-      allow read: if isAuthenticated() && request.auth.uid == uid;
-      allow write: if false;
-    }
-
-    // CRITICAL FIX: Proposals — validate field-level changes for non-creators.
-    match /proposals/{proposalId} {
-      allow read: if true;
-      allow create: if isAuthenticated()
-        && request.resource.data.creatorUid == request.auth.uid
-        && isValidString(request.resource.data.title, 200)
-        && isValidString(request.resource.data.description, 2000);
-
-      // Non-creators can only modify votes (adding/removing their own vote).
-      // Core proposal fields (title, description, creatorUid, status) must stay unchanged.
-      allow update: if isAuthenticated() && (
-        resource.data.creatorUid == request.auth.uid || (
-          request.resource.data.title == resource.data.title &&
-          request.resource.data.description == resource.data.description &&
-          request.resource.data.creatorUid == resource.data.creatorUid &&
-          request.resource.data.status == resource.data.status &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['votes', 'voterUids'])
-        )
-      );
-
-      allow delete: if isAuthenticated() && resource.data.creatorUid == request.auth.uid;
-    }
-
-    // CRITICAL FIX: Settings — no client-side writes. Managed via Firebase console or Admin SDK.
-    match /settings/{settingId} {
-      allow read: if true;
-      allow write: if false;
     }
   }
 }
