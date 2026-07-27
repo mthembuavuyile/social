@@ -71,3 +71,29 @@ export const formatRichTextReact = (text: string): React.ReactNode => {
     );
   });
 };
+
+export interface TwitterInfo {
+  username: string;
+  tweetId: string;
+  originalUrl: string;
+}
+
+export const parseTwitterUrl = (url?: string): TwitterInfo | null => {
+  if (!url) return null;
+  const regex = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/([a-zA-Z0-9_]+)\/status\/([0-9]+)/i;
+  const match = url.match(regex);
+  if (!match) return null;
+  return {
+    username: match[1],
+    tweetId: match[2],
+    originalUrl: match[0],
+  };
+};
+
+export const extractTwitterUrlFromText = (text?: string): string | null => {
+  if (!text) return null;
+  const regex = /https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/[0-9]+/i;
+  const match = text.match(regex);
+  return match ? match[0] : null;
+};
+

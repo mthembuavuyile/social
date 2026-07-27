@@ -6,7 +6,7 @@ import { PostCard } from './components/Feed/PostCard';
 import { Toast } from './components/Layout/Toast';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { dbFirestore } from './firebase';
-import { Home, User, AlertTriangle } from 'lucide-react';
+import { Home, User, AlertTriangle, ShieldCheck, FileText, ExternalLink } from 'lucide-react';
 
 export default function App() {
   const { user, updateUserName } = useAuth();
@@ -96,17 +96,26 @@ export default function App() {
           <AlertTriangle size={24} color="var(--accent-primary)" />
           <h1 style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>Civicly</h1>
         </div>
-        <div style={{ display: 'flex', gap: '16px' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           <button onClick={() => setActiveView('home')} style={{ background: 'transparent', border: 'none', color: activeView === 'home' ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Home size={18} /> <span className="hide-mobile">Feed</span>
           </button>
           <button onClick={() => setActiveView('profile')} style={{ background: 'transparent', border: 'none', color: activeView === 'profile' ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <User size={18} /> <span className="hide-mobile">Profile</span>
           </button>
+          <a 
+            href="/policy.html" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem' }}
+            title="Privacy Policy & Terms"
+          >
+            <ShieldCheck size={18} /> <span className="hide-mobile">Terms & Privacy</span>
+          </a>
         </div>
       </nav>
 
-      <main className="main-content" style={{ maxWidth: '600px', margin: '0 auto', padding: '16px' }}>
+      <main className="main-content" style={{ maxWidth: '600px', width: '100%', margin: '0 auto', padding: '16px', flex: 1 }}>
         {activeView === 'home' && (
           <>
             <PostComposer 
@@ -171,9 +180,48 @@ export default function App() {
             <p style={{ marginTop: '16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
               Reporting as: {user?.displayName || 'Citizen'}
             </p>
+
+            <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '24px', paddingTop: '20px' }}>
+              <h3 style={{ fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '8px' }}>Legal & Policies</h3>
+              <a 
+                href="/policy.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-main)',
+                  textDecoration: 'none',
+                  fontSize: '0.9rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={16} color="var(--accent-primary)" />
+                  <span>Privacy Policy & Terms of Service</span>
+                </div>
+                <ExternalLink size={14} color="var(--text-muted)" />
+              </a>
+            </div>
           </div>
         )}
       </main>
+
+      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '16px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', background: 'var(--bg-color)' }}>
+        <span>Civicly &copy; 2026 &bull; </span>
+        <a 
+          href="/policy.html" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500 }}
+        >
+          Privacy Policy & Terms
+        </a>
+      </footer>
 
       <Toast message={toast.message} type={toast.type} show={toast.show} />
     </div>

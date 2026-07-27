@@ -16,4 +16,5 @@ export interface Post {
   status?: 'active' | 'in_progress' | 'resolved';
   latitude?: number;
   longitude?: number;
+  socialUrl?: string; // e.g. X/Twitter post link
 }

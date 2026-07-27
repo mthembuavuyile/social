@@ -33,6 +33,7 @@ export function usePosts() {
           status: data.status || 'active',
           latitude: data.latitude,
           longitude: data.longitude,
+          socialUrl: data.socialUrl,
         });
       });
       setPosts(postsArray);

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Post } from '../../types';
-import { getInitials, getUserColor, timeAgo, formatRichTextReact } from '../../utils';
+import { getInitials, getUserColor, timeAgo, formatRichTextReact, extractTwitterUrlFromText } from '../../utils';
 import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { TwitterEmbed } from './TwitterEmbed';
 
 interface PostCardProps {
   post: Post;
@@ -45,6 +46,8 @@ export const PostCard: React.FC<PostCardProps> = ({
     in_progress: 'In Progress',
     resolved: 'Resolved',
   };
+
+  const twitterUrl = post.socialUrl || extractTwitterUrlFromText(post.content);
 
   return (
     <article className="post-card" style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
@@ -98,6 +101,10 @@ export const PostCard: React.FC<PostCardProps> = ({
       <div className="post-content" style={{ fontSize: '0.95rem', lineHeight: '1.5', color: 'var(--text-main)', marginBottom: '12px' }}>
         {formatRichTextReact(post.content)}
       </div>
+
+      {twitterUrl && (
+        <TwitterEmbed url={twitterUrl} />
+      )}
 
       {post.imageUrl && (
         <img src={post.imageUrl} alt="Issue" style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }} />

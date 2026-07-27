@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { getInitials, getUserColor } from '../../utils';
+import { getInitials, getUserColor, extractTwitterUrlFromText, parseTwitterUrl } from '../../utils';
 import { X, Send, MapPin, Loader2, Link } from 'lucide-react';
+import { TwitterEmbed } from './TwitterEmbed';
+
+const XIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = '#1d9bf0' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
 
 const MAX_CONTENT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 200;
 const MAX_CITY_LENGTH = 100;
 const MAX_IMAGE_URL_LENGTH = 1000;
+const MAX_SOCIAL_URL_LENGTH = 500;
 
 interface PostComposerProps {
   user: { uid: string; displayName: string } | null;
@@ -18,6 +26,7 @@ interface PostComposerProps {
     city?: string;
     latitude?: number;
     longitude?: number;
+    socialUrl?: string;
   }) => Promise<void>;
   showToast: (msg: string, type?: 'info' | 'success' | 'error') => void;
 }
@@ -29,6 +38,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
   const [province, setProvince] = useState('Gauteng');
   const [city, setCity] = useState('');
   const [category, setCategory] = useState('pothole');
+  const [socialUrl, setSocialUrl] = useState('');
   const [isPosting, setIsPosting] = useState(false);
 
   // Geolocation
@@ -50,9 +60,22 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
     setProvince('Gauteng');
     setCity('');
     setCategory('pothole');
+    setSocialUrl('');
     setLatitude(undefined);
     setLongitude(undefined);
     setIsExpanded(false);
+  };
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    if (val.length <= MAX_CONTENT_LENGTH) {
+      setContent(val);
+      // Auto detect X/Twitter URL in pasted content
+      const twitterUrl = extractTwitterUrlFromText(val);
+      if (twitterUrl && !socialUrl) {
+        setSocialUrl(twitterUrl);
+      }
+    }
   };
 
   const handlePost = async () => {
@@ -84,6 +107,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
         city: city.trim(),
         latitude,
         longitude,
+        socialUrl: socialUrl.trim() || undefined,
       });
       showToast('Issue reported successfully!', 'success');
       handleCancel();
@@ -128,6 +152,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
   const avatarStyle = { background: `linear-gradient(135deg, ${c1}, ${c2})` };
 
   const hasValidImageUrl = imageUrl.trim().length > 0 && !imagePreviewError;
+  const hasValidTwitterUrl = Boolean(parseTwitterUrl(socialUrl.trim()));
 
   return (
     <div className="composer">
@@ -135,14 +160,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
         <div className="user-avatar" style={avatarStyle}>{initials}</div>
         <textarea
           className="compose-input"
-          placeholder="Report a civic issue (pothole, water leak, broken traffic light...)"
+          placeholder="Report a civic issue or paste an X/Twitter post link..."
           rows={isExpanded ? 3 : 1}
           value={content}
-          onChange={(e) => {
-            if (e.target.value.length <= MAX_CONTENT_LENGTH) {
-              setContent(e.target.value);
-            }
-          }}
+          onChange={handleContentChange}
           onFocus={handleFocus}
           maxLength={MAX_CONTENT_LENGTH}
         />
@@ -165,6 +186,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
           <button type="button" className="remove-preview-btn" onClick={handleRemoveImage} style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', padding: '4px', cursor: 'pointer' }}>
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {isExpanded && hasValidTwitterUrl && (
+        <div style={{ marginTop: '10px' }}>
+          <TwitterEmbed url={socialUrl.trim()} />
         </div>
       )}
 
@@ -204,7 +231,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
               <input
                 type="text"
                 className="standard-input"
-                placeholder="e.g. Rivonia Rd, Sandton"
+                placeholder="e.g. Lancaster street, Grosvenor"
                 value={location}
                 onChange={(e) => {
                   if (e.target.value.length <= MAX_LOCATION_LENGTH) {
@@ -236,6 +263,38 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
               maxLength={MAX_CITY_LENGTH}
               style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
             />
+          </div>
+
+          <div className="form-group">
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Social Media Link (X / Twitter)</label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+                  <XIcon size={14} color="#1d9bf0" />
+                </div>
+                <input
+                  type="url"
+                  className="standard-input"
+                  placeholder="https://x.com/username/status/123456789"
+                  value={socialUrl}
+                  onChange={(e) => {
+                    if (e.target.value.length <= MAX_SOCIAL_URL_LENGTH) {
+                      setSocialUrl(e.target.value);
+                    }
+                  }}
+                  maxLength={MAX_SOCIAL_URL_LENGTH}
+                  style={{ width: '100%', padding: '8px 8px 8px 32px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+              {socialUrl.trim() && (
+                <button type="button" onClick={() => setSocialUrl('')} style={{ padding: '8px', borderRadius: '4px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
+              Attach an X/Twitter post link for verification or context
+            </p>
           </div>
 
           <div className="form-group">
@@ -286,3 +345,4 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
     </div>
   );
 };
+
