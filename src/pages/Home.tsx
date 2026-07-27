@@ -128,13 +128,30 @@ export const Home: React.FC<HomeProps> = ({
 
   return (
     <div className="home-feed-page">
-      {/* Sticky Header with Feed Tabs */}
-      <div className="feed-header-sticky">
-        <div className="feed-header-top">
-          <h2 className="feed-title">Home Feed</h2>
-          <span className="feed-badge">{filteredPosts.length} Reports</span>
-        </div>
+      {/* Top Header - Non-sticky */}
+      <div className="feed-header-top" style={{ marginBottom: '16px' }}>
+        <h2 className="feed-title">Home Feed</h2>
+        <span className="feed-badge">{filteredPosts.length} Reports</span>
+      </div>
 
+      {/* Composer Section - Now above tabs */}
+      <div className="composer-container" style={{ marginBottom: '24px' }}>
+        <PostComposer 
+          user={user}
+          onSubmitPost={async (data) => {
+            await createPost({
+              ...data,
+              category: data.category as Post['category'],
+              author: user?.displayName || 'Citizen',
+              authorUid: user?.uid || '',
+            });
+            toast.success('Civic issue reported successfully!');
+          }}
+        />
+      </div>
+
+      {/* Sticky Tabs */}
+      <div className="feed-header-sticky">
         {/* Tab Selector */}
         <div className="feed-tabs">
           <button 
@@ -171,21 +188,6 @@ export const Home: React.FC<HomeProps> = ({
         </div>
       </div>
 
-      {/* Composer Section */}
-      <div className="composer-container" style={{ marginTop: '16px' }}>
-        <PostComposer 
-          user={user}
-          onSubmitPost={async (data) => {
-            await createPost({
-              ...data,
-              category: data.category as Post['category'],
-              author: user?.displayName || 'Citizen',
-              authorUid: user?.uid || '',
-            });
-            toast.success('Civic issue reported successfully!');
-          }}
-        />
-      </div>
 
       {/* Active Filter Indicators */}
       {(selectedCategory !== 'all' || searchQuery) && (
