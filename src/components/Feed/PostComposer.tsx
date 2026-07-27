@@ -224,7 +224,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
 
       <div className={`composer-extras ${isExpanded ? 'active' : ''}`} style={{ display: isExpanded ? 'block' : 'none', marginTop: '12px' }}>
         <div className="extras-inputs" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="composer-responsive-grid">
             <div className="form-group">
               <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Category</label>
               <select className="standard-input" value={category} onChange={(e) => setCategory(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
