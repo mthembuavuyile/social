@@ -48,6 +48,11 @@ export const CivicMap: React.FC<CivicMapProps> = ({
     const map = L.map(containerRef.current).setView([-26.2041, 28.0473], 11);
     mapRef.current = map;
 
+    // Ensure map tiles load fully if container size was slightly delayed
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+
     // Add OpenStreetMap tile layer (Twitter Lights Out theme friendly tile style - CartoDB Dark Matter!)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',

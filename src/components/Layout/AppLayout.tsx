@@ -3,7 +3,7 @@ import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
 import { Post } from '../../types';
 import { NavLink } from 'react-router-dom';
-import { Home, MapPin, User, AlertTriangle, PlusCircle } from 'lucide-react';
+import { Home, MapPin, User, AlertTriangle, Plus, Bell } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -90,8 +90,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
             }
           }}
         >
-          <PlusCircle size={24} color="#ffffff" />
+          <Plus size={26} color="#ffffff" strokeWidth={2.5} />
         </button>
+
+        <NavLink to="/alerts" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
+          <Bell size={20} />
+          <span>Alerts</span>
+        </NavLink>
 
         <NavLink to="/profile" className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}>
           <User size={20} />

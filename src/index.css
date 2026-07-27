@@ -924,15 +924,22 @@ html, body {
   color: var(--accent-primary);
 }
 .mobile-nav-action {
-  background: var(--accent-primary);
-  width: 44px;
-  height: 44px;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, #0a73b7 100%);
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: -16px;
-  box-shadow: 0 4px 10px rgba(29, 155, 240, 0.4);
+  margin-top: -24px;
+  box-shadow: 0 8px 20px rgba(29, 155, 240, 0.4), 0 0 0 4px var(--bg-color);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+}
+.mobile-nav-action:active {
+  transform: scale(0.92);
+  box-shadow: 0 4px 10px rgba(29, 155, 240, 0.3), 0 0 0 2px var(--bg-color);
 }
 
 /* Responsiveness Media Queries */

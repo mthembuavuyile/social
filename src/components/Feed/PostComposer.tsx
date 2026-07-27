@@ -124,6 +124,24 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
     }
 
     setIsPosting(true);
+    
+    let finalLat = latitude;
+    let finalLng = longitude;
+
+    if (finalLat === undefined || finalLng === undefined) {
+      try {
+        const query = encodeURIComponent(`${trimmedLoc}, ${city ? city.trim() + ', ' : ''}${province}, South Africa`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          finalLat = parseFloat(data[0].lat);
+          finalLng = parseFloat(data[0].lon);
+        }
+      } catch (err) {
+        console.error('Geocoding failed:', err);
+      }
+    }
+
     try {
       await onSubmitPost({
         content: trimmedContent,
@@ -132,8 +150,8 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
         location: trimmedLoc,
         province,
         city: city.trim(),
-        latitude,
-        longitude,
+        latitude: finalLat,
+        longitude: finalLng,
         socialUrl: socialUrl.trim() || undefined,
       });
       toast.success('Issue reported successfully!');
