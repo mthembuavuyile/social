@@ -38,6 +38,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <AlertTriangle size={20} color="var(--accent-primary)" />
           <span className="mobile-title">Civicly</span>
         </div>
+        <div className="mobile-header-right">
+          <span className="feed-badge">{posts.length} Reports</span>
+        </div>
       </header>
 
       {/* Main 3-Column Grid Container */}
