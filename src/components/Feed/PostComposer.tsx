@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { getInitials, getUserColor, extractTwitterUrlFromText, parseTwitterUrl } from '../../utils';
-import { X, Send, MapPin, Loader2, Link } from 'lucide-react';
+import { X, Send, MapPin, Loader2, Link, Image as ImageIcon } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
+import { storage } from '../../firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const XIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = '#1d9bf0' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
@@ -46,9 +48,35 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Image URL instead of file upload
+  // Image Upload State
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreviewError, setImagePreviewError] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image must be less than 5MB.', 'error');
+      return;
+    }
+    setIsUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const storageRef = ref(storage, `posts/${fileName}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setImageUrl(url);
+      setImagePreviewError(false);
+    } catch (err) {
+      showToast('Failed to upload image.', 'error');
+    } finally {
+      setIsUploadingImage(false);
+      // Reset input value to allow uploading the same file again if removed
+      e.target.value = '';
+    }
+  };
 
   const handleFocus = () => setIsExpanded(true);
 
@@ -298,38 +326,41 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
           </div>
 
           <div className="form-group">
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Photo Evidence (Image URL)</label>
+            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Photo Evidence</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Link size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                <input
-                  type="url"
-                  className="standard-input"
-                  placeholder="https://example.com/photo.jpg"
-                  value={imageUrl}
-                  onChange={(e) => {
-                    if (e.target.value.length <= MAX_IMAGE_URL_LENGTH) {
-                      setImageUrl(e.target.value);
-                      setImagePreviewError(false);
-                    }
-                  }}
-                  maxLength={MAX_IMAGE_URL_LENGTH}
-                  style={{ width: '100%', padding: '8px 8px 8px 32px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
-                />
-              </div>
-              {imageUrl.trim() && (
-                <button type="button" onClick={handleRemoveImage} style={{ padding: '8px', borderRadius: '4px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <X size={14} />
-                </button>
+              <input
+                type="file"
+                accept="image/*"
+                id="image-upload"
+                style={{ display: 'none' }}
+                onChange={handleImageUpload}
+                disabled={isUploadingImage || !!imageUrl}
+              />
+              {!imageUrl && (
+                <label 
+                  htmlFor="image-upload" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)', cursor: isUploadingImage ? 'not-allowed' : 'pointer', opacity: isUploadingImage ? 0.7 : 1 }}
+                >
+                  {isUploadingImage ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
+                  {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+                </label>
+              )}
+              {imageUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--accent-success)' }}>Image uploaded!</span>
+                  <button type="button" onClick={handleRemoveImage} style={{ padding: '6px', borderRadius: '4px', background: 'var(--accent-danger)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <X size={14} />
+                  </button>
+                </div>
               )}
             </div>
             {imagePreviewError && imageUrl.trim() && (
               <p style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', marginTop: '4px', marginBottom: 0 }}>
-                ⚠ Could not load image. Check the URL is a direct link to an image.
+                ⚠ Could not load image preview.
               </p>
             )}
             <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
-              Paste a direct link to an image (JPEG, PNG, GIF, WebP)
+              Max size: 5MB (JPEG, PNG, GIF, WebP)
             </p>
           </div>
         </div>
