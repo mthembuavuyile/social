@@ -47,9 +47,20 @@ export const formatRichTextReact = (text: string): React.ReactNode => {
     
     const formattedLine = parts.map((part, partIdx) => {
       if (part.startsWith('http://') || part.startsWith('https://')) {
+        let displayUrl = part;
+        try {
+          const urlObj = new URL(part);
+          displayUrl = urlObj.hostname;
+          if (displayUrl.startsWith('www.')) {
+            displayUrl = displayUrl.substring(4);
+          }
+        } catch (e) {
+          // Keep original part if URL parsing fails
+        }
+
         return (
-          <a key={partIdx} href={part} target="_blank" rel="noopener noreferrer">
-            {part}
+          <a key={partIdx} href={part} target="_blank" rel="noopener noreferrer" title={part}>
+            {displayUrl}
           </a>
         );
       } else if (part.startsWith('#')) {
