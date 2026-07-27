@@ -1,104 +1,128 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
-import { Home as HomeIcon, User, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { usePosts } from './hooks/usePosts';
 import { Toaster } from 'react-hot-toast';
 
-// Pages
+// Layout & Pages
+import { AppLayout } from './components/Layout/AppLayout';
 import { Home } from './pages/Home';
+import { MapView } from './pages/MapView';
 import { Profile } from './pages/Profile';
+import { PostComposer } from './components/Feed/PostComposer';
+import { Post } from './types';
+import { X } from 'lucide-react';
 
-function NavLinks() {
-  const location = useLocation();
-  
-  return (
-    <div className="nav-links">
-      <Link 
-        to="/" 
-        className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
-      >
-        <HomeIcon size={18} /> <span className="hide-mobile">Feed</span>
-      </Link>
-      <Link 
-        to="/profile" 
-        className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}
-      >
-        <User size={18} /> <span className="hide-mobile">Profile</span>
-      </Link>
-      <a 
-        href="/policy.html" 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        className="nav-link nav-link-sm"
-        title="Privacy Policy & Terms"
-      >
-        <ShieldCheck size={18} /> <span className="hide-mobile">Terms & Privacy</span>
-      </a>
-    </div>
-  );
-}
-
-export default function App() {
+function AppContent() {
   const { user, updateUserName } = useAuth();
+  const { posts, loading: postsLoading, createPost, updatePostStatus, deletePost } = usePosts();
 
-  // Apply theme dynamically to body
+  // Shared Global State for Filtering and Navigation
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [isComposerModalOpen, setIsComposerModalOpen] = useState(false);
+
+  // Apply dark theme dynamically to body
   useEffect(() => {
     document.body.className = 'theme-twitter-dark';
   }, []);
 
   return (
-    <BrowserRouter>
-      <div className="app-container">
-        <nav className="nav-bar">
-          <Link to="/" className="nav-brand">
-            <AlertTriangle size={24} color="var(--accent-primary)" />
-            <h1>Civicly</h1>
-          </Link>
-          <NavLinks />
-        </nav>
-
-        <main className="main-layout">
-          <Routes>
-            <Route path="/" element={<Home user={user} />} />
-            <Route path="/profile" element={<Profile user={user} updateUserName={updateUserName} />} />
-          </Routes>
-        </main>
-
-        <footer className="footer-text">
-          <span>Civicly &copy; 2026 &bull; </span>
-          <a 
-            href="/policy.html" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="footer-link"
-          >
-            Privacy Policy & Terms
-          </a>
-        </footer>
-
-        <Toaster 
-          position="bottom-center"
-          toastOptions={{
-            style: {
-              background: 'var(--surface-color)',
-              color: 'var(--text-main)',
-              border: '1px solid var(--border-color)',
-            },
-            success: {
-              iconTheme: {
-                primary: 'var(--accent-success)',
-                secondary: 'white',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: 'var(--accent-danger)',
-                secondary: 'white',
-              },
-            },
-          }}
+    <AppLayout
+      user={user}
+      posts={posts}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      selectedCategory={selectedCategory}
+      onSelectCategory={setSelectedCategory}
+      activeFilter={activeFilter}
+      onSelectFilter={setActiveFilter}
+      onOpenComposerModal={() => setIsComposerModalOpen(true)}
+    >
+      <Routes>
+        <Route 
+          path="/" 
+          element={
+            <Home 
+              user={user} 
+              activeFilter={activeFilter}
+              onSelectFilter={setActiveFilter}
+              selectedCategory={selectedCategory}
+              searchQuery={searchQuery}
+              posts={posts}
+              postsLoading={postsLoading}
+              createPost={createPost}
+              updatePostStatus={updatePostStatus}
+              deletePost={deletePost}
+            />
+          } 
         />
-      </div>
+        <Route 
+          path="/map" 
+          element={<MapView user={user} />} 
+        />
+        <Route 
+          path="/profile" 
+          element={<Profile user={user} updateUserName={updateUserName} />} 
+        />
+      </Routes>
+
+      {/* Optional Report Issue Modal */}
+      {isComposerModalOpen && (
+        <div className="composer-modal-overlay" onClick={() => setIsComposerModalOpen(false)}>
+          <div className="composer-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Report Civic Issue</h3>
+              <button className="modal-close-btn" onClick={() => setIsComposerModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <PostComposer 
+              user={user}
+              onSubmitPost={async (data) => {
+                await createPost({
+                  ...data,
+                  category: data.category as Post['category'],
+                  author: user?.displayName || 'Citizen',
+                  authorUid: user?.uid || '',
+                });
+                setIsComposerModalOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+      <Toaster 
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            background: 'var(--surface-color)',
+            color: 'var(--text-main)',
+            border: '1px solid var(--border-color)',
+          },
+          success: {
+            iconTheme: {
+              primary: 'var(--accent-success)',
+              secondary: 'white',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: 'var(--accent-danger)',
+              secondary: 'white',
+            },
+          },
+        }}
+      />
     </BrowserRouter>
   );
 }

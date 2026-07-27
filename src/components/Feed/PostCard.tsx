@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Post } from '../../types';
 import { getInitials, getUserColor, timeAgo, formatRichTextReact, extractTwitterUrlFromText } from '../../utils';
-import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
+import toast from 'react-hot-toast';
 
 interface PostCardProps {
   post: Post;
@@ -19,6 +20,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onDeletePost,
   onUpdateStatus,
 }) => {
+  const [copied, setCopied] = useState(false);
   const totalUpvotes = post.reactions?.['👍'] || 0;
   const myUpvote = user && post.userReactions?.['👍'] === '👍';
   const isOwner = user?.uid === post.authorUid;
@@ -27,12 +29,12 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [ac1] = getUserColor(post.author);
 
   const categoryLabels: Record<string, string> = {
-    pothole: 'Pothole',
-    water_leak: 'Water Leak',
-    electricity: 'Electricity Outage',
-    sewage: 'Sewage Overflow',
-    traffic_light: 'Broken Robot',
-    other: 'Other Issue',
+    pothole: '🕳️ Pothole',
+    water_leak: '💧 Water Leak',
+    electricity: '⚡ Electricity Outage',
+    sewage: '⚠️ Sewage Overflow',
+    traffic_light: '🚦 Broken Robot',
+    other: '🏗️ Other Issue',
   };
 
   const statusColors: Record<string, string> = {
@@ -49,26 +51,57 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const twitterUrl = post.socialUrl || extractTwitterUrlFromText(post.content);
 
+  const handleShare = async () => {
+    const shareData = {
+      title: `Civicly Report: ${post.category || 'Issue'}`,
+      text: post.content.substring(0, 100) + '...',
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        // Fallback to clipboard
+      }
+    }
+
+    navigator.clipboard.writeText(window.location.origin + '/#post-' + post.id);
+    setCopied(true);
+    toast.success('Report link copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <article className="post-card" style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
-      <div className="post-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div className="post-author-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="user-avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', background: ac1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+    <article className="post-card" id={`post-${post.id}`}>
+      {/* Header Info */}
+      <div className="post-header">
+        <div className="post-author-info">
+          <div className="user-avatar" style={{ background: ac1 }}>
             {authorInitials}
           </div>
           <div className="post-meta">
-            <div style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{post.author}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <div className="post-author-name">{post.author}</div>
+            <div className="post-timestamp">
               <Clock size={12} />
               <span>{timeAgo(post.timestamp)}</span>
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span className={`status-badge ${statusColors[post.status || 'active']}`} style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {post.status === 'resolved' ? <CheckCircle2 size={12} /> : post.status === 'active' ? <AlertTriangle size={12} /> : <div className="status-dot"></div>}
+
+        <div className="post-header-actions">
+          <span className={`status-badge ${statusColors[post.status || 'active']}`}>
+            {post.status === 'resolved' ? (
+              <CheckCircle2 size={12} />
+            ) : post.status === 'active' ? (
+              <AlertTriangle size={12} />
+            ) : (
+              <div className="status-dot"></div>
+            )}
             {statusLabels[post.status || 'active']}
           </span>
+
           {isOwner && (
             <button 
               onClick={() => {
@@ -76,8 +109,8 @@ export const PostCard: React.FC<PostCardProps> = ({
                   onDeletePost(post.id);
                 }
               }} 
-              style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer' }} 
-              title="Delete"
+              className="btn-icon-danger"
+              title="Delete Report"
             >
               <Trash2 size={16} />
             </button>
@@ -85,85 +118,97 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
       </div>
 
-      <div className="civic-meta-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+      {/* Civic Meta Info Chips */}
+      <div className="civic-meta-row">
         {post.category && (
-          <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '4px', background: 'rgba(29, 155, 240, 0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(29, 155, 240, 0.2)' }}>
+          <span className="category-chip">
             {categoryLabels[post.category] || post.category}
           </span>
         )}
         {post.location && (
-          <span style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span className="location-chip">
             <MapPin size={12} /> {post.location}
           </span>
         )}
       </div>
 
-      <div className="post-content" style={{ fontSize: '0.95rem', lineHeight: '1.5', color: 'var(--text-main)', marginBottom: '12px' }}>
+      {/* Main Issue Content */}
+      <div className="post-content-body">
         {formatRichTextReact(post.content)}
       </div>
 
+      {/* Embedded Social Media Preview */}
       {twitterUrl && (
         <TwitterEmbed url={twitterUrl} />
       )}
 
+      {/* Image Attachment */}
       {post.imageUrl && (
-        <div style={{ marginBottom: '12px' }}>
-          <img src={post.imageUrl} alt="Issue" style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px' }} />
-          <div style={{ marginTop: '4px', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>Source:</span> 
+        <div className="post-image-container">
+          <img src={post.imageUrl} alt="Civic Issue" className="post-image" />
+          <div className="image-source-meta">
+            <ExternalLink size={12} />
             <a 
               href={post.imageUrl} 
               target="_blank" 
               rel="noopener noreferrer" 
-              style={{ color: 'var(--accent-primary)', textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80%' }}
-              title={post.imageUrl}
+              className="image-link"
             >
-              {(() => {
-                try {
-                  return new URL(post.imageUrl).hostname;
-                } catch {
-                  return 'Image Link';
-                }
-              })()}
+              View Attachment Photo
             </a>
           </div>
         </div>
       )}
 
-      {/* Status Controls — restricted to post owner */}
+      {/* Owner Status Management Bar */}
       {isOwner && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', padding: '8px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
-          <button 
-            onClick={() => onUpdateStatus(post.id, 'active')} 
-            disabled={post.status === 'active'}
-            style={{ flex: 1, padding: '6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: post.status === 'active' ? 'var(--accent-danger)' : 'transparent', color: post.status === 'active' ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            Mark Open
-          </button>
-          <button 
-            onClick={() => onUpdateStatus(post.id, 'in_progress')} 
-            disabled={post.status === 'in_progress'}
-            style={{ flex: 1, padding: '6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: post.status === 'in_progress' ? '#f59e0b' : 'transparent', color: post.status === 'in_progress' ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            Mark In Progress
-          </button>
-          <button 
-            onClick={() => onUpdateStatus(post.id, 'resolved')} 
-            disabled={post.status === 'resolved'}
-            style={{ flex: 1, padding: '6px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: post.status === 'resolved' ? 'var(--accent-success)' : 'transparent', color: post.status === 'resolved' ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            Mark Resolved
-          </button>
+        <div className="status-management-bar">
+          <span className="bar-label">Update Status:</span>
+          <div className="bar-buttons">
+            <button 
+              onClick={() => onUpdateStatus(post.id, 'active')} 
+              disabled={post.status === 'active'}
+              className={`status-btn ${post.status === 'active' ? 'active-open' : ''}`}
+            >
+              Open
+            </button>
+            <button 
+              onClick={() => onUpdateStatus(post.id, 'in_progress')} 
+              disabled={post.status === 'in_progress'}
+              className={`status-btn ${post.status === 'in_progress' ? 'active-progress' : ''}`}
+            >
+              In Progress
+            </button>
+            <button 
+              onClick={() => onUpdateStatus(post.id, 'resolved')} 
+              disabled={post.status === 'resolved'}
+              className={`status-btn ${post.status === 'resolved' ? 'active-resolved' : ''}`}
+            >
+              Resolved
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="post-actions-bar" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', display: 'flex' }}>
+      {/* Post Action Footer Toolbar */}
+      <div className="post-actions-bar">
         <button 
           onClick={() => { if (user) onToggleReaction(post.id, '👍'); }} 
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: myUpvote ? 'var(--accent-primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px' }}
+          className={`action-btn upvote-btn ${myUpvote ? 'upvoted' : ''}`}
+          title="Endorse & Confirm Urgency"
         >
           <ThumbsUp size={16} />
-          <span>Confirm Issue ({totalUpvotes})</span>
+          <span>{myUpvote ? 'Endorsed' : 'Endorse Issue'}</span>
+          <span className="upvote-count-badge">{totalUpvotes}</span>
+        </button>
+
+        <button 
+          onClick={handleShare}
+          className="action-btn share-btn"
+          title="Share Report Link"
+        >
+          {copied ? <Check size={16} color="var(--accent-success)" /> : <Share2 size={16} />}
+          <span>{copied ? 'Copied' : 'Share'}</span>
         </button>
       </div>
     </article>
