@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { usePosts } from './hooks/usePosts';
 import { Toaster } from 'react-hot-toast';
@@ -10,6 +10,8 @@ import { Home } from './pages/Home';
 import { MapView } from './pages/MapView';
 import { Profile } from './pages/Profile';
 import { PostDetail } from './pages/PostDetail';
+import { Terms } from './pages/Terms';
+import { NotFound } from './pages/NotFound';
 import { PostComposer } from './components/Feed/PostComposer';
 import { Post } from './types';
 import { X } from 'lucide-react';
@@ -70,6 +72,34 @@ function AppContent() {
         <Route 
           path="/profile" 
           element={<Profile user={user} updateUserName={updateUserName} />} 
+        />
+        <Route 
+          path="/terms" 
+          element={<Terms />} 
+        />
+        <Route 
+          path="/privacy" 
+          element={<Terms />} 
+        />
+        <Route 
+          path="/policy" 
+          element={<Terms />} 
+        />
+        <Route 
+          path="/policy.html" 
+          element={<Terms />} 
+        />
+        <Route 
+          path="/index.html" 
+          element={<Navigate to="/" replace />} 
+        />
+        <Route 
+          path="/404" 
+          element={<NotFound />} 
+        />
+        <Route 
+          path="*" 
+          element={<NotFound />} 
         />
       </Routes>
 

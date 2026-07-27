@@ -94,15 +94,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <span>Profile & Reports</span>
         </NavLink>
 
-        <a 
-          href="/policy.html" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="sidebar-link"
+        <NavLink 
+          to="/terms" 
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
         >
           <ShieldCheck size={20} />
           <span>Terms & Privacy</span>
-        </a>
+        </NavLink>
       </nav>
 
       {/* Primary Action Call to Action */}

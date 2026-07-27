@@ -498,9 +498,9 @@ html, body {
 .feed-header-sticky {
   position: sticky;
   top: 0;
-  background: rgba(13, 17, 23, 0.85);
-  backdrop-filter: blur(12px);
+  background: var(--bg-color);
   z-index: 50;
+  padding-top: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
 }

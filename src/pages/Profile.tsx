@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FileText, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ProfileProps {
@@ -59,10 +60,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
 
       <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '24px', paddingTop: '20px' }}>
         <h3 style={{ fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '8px' }}>Legal & Policies</h3>
-        <a 
-          href="/policy.html" 
-          target="_blank" 
-          rel="noopener noreferrer"
+        <Link 
+          to="/terms" 
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -80,8 +79,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
             <FileText size={16} color="var(--accent-primary)" />
             <span>Privacy Policy & Terms of Service</span>
           </div>
-          <ExternalLink size={14} color="var(--text-muted)" />
-        </a>
+          <ChevronRight size={14} color="var(--text-muted)" />
+        </Link>
       </div>
     </div>
   );
