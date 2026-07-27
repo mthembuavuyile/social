@@ -10,18 +10,17 @@ export const getUserColor = (name: string): [string, string] => {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
     hash |= 0;
   }
-  const gradients: [string, string][] = [
-    ['#4fc3f7', '#a78bfa'], // blue → purple
-    ['#f87171', '#fb923c'], // red → orange
-    ['#34d399', '#4fc3f7'], // green → blue
-    ['#f472b6', '#a78bfa'], // pink → purple
-    ['#fb923c', '#fbbf24'], // orange → yellow
-    ['#a78bfa', '#f472b6'], // purple → pink
-    ['#34d399', '#a78bfa'], // green → purple
-    ['#60a5fa', '#34d399'], // blue → green
+  const colors: [string, string][] = [
+    ['#3b82f6', '#3b82f6'], // blue
+    ['#ef4444', '#ef4444'], // red
+    ['#10b981', '#10b981'], // green
+    ['#8b5cf6', '#8b5cf6'], // purple
+    ['#f59e0b', '#f59e0b'], // amber
+    ['#6366f1', '#6366f1'], // indigo
+    ['#06b6d4', '#06b6d4'], // cyan
   ];
-  const index = Math.abs(hash) % gradients.length;
-  return gradients[index];
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
 };
 
 export const timeAgo = (ts: number): string => {

@@ -148,8 +148,8 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
   };
 
   const initials = getInitials(user?.displayName || 'Citizen');
-  const [c1, c2] = getUserColor(user?.displayName || 'Citizen');
-  const avatarStyle = { background: `linear-gradient(135deg, ${c1}, ${c2})` };
+  const [c1] = getUserColor(user?.displayName || 'Citizen');
+  const avatarStyle = { background: c1 };
 
   const hasValidImageUrl = imageUrl.trim().length > 0 && !imagePreviewError;
   const hasValidTwitterUrl = Boolean(parseTwitterUrl(socialUrl.trim()));

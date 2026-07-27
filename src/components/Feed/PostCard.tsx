@@ -24,7 +24,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const isOwner = user?.uid === post.authorUid;
 
   const authorInitials = getInitials(post.author);
-  const [ac1, ac2] = getUserColor(post.author);
+  const [ac1] = getUserColor(post.author);
 
   const categoryLabels: Record<string, string> = {
     pothole: 'Pothole',
@@ -53,7 +53,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     <article className="post-card" style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
       <div className="post-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div className="post-author-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="user-avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', background: `linear-gradient(135deg, ${ac1}, ${ac2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+          <div className="user-avatar" style={{ width: '40px', height: '40px', borderRadius: '50%', background: ac1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
             {authorInitials}
           </div>
           <div className="post-meta">

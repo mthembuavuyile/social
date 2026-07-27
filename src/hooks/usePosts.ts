@@ -45,8 +45,11 @@ export function usePosts() {
 
   const createPost = async (postData: Partial<Post>) => {
     const postsRef = collection(dbFirestore, 'posts');
+    const cleanedData = Object.fromEntries(
+      Object.entries(postData).filter(([_, v]) => v !== undefined)
+    );
     await addDoc(postsRef, {
-      ...postData,
+      ...cleanedData,
       timestamp: serverTimestamp(),
     });
   };
