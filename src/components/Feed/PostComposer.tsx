@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { getInitials, getUserColor, extractTwitterUrlFromText, parseTwitterUrl } from '../../utils';
-import { X, Send, MapPin, Loader2, Link, Image as ImageIcon } from 'lucide-react';
+import { X, Send, MapPin, Loader2, Image as ImageIcon } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
 import { storage } from '../../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import toast from 'react-hot-toast';
 
 const XIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = '#1d9bf0' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
@@ -14,7 +15,6 @@ const XIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color =
 const MAX_CONTENT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 200;
 const MAX_CITY_LENGTH = 100;
-const MAX_IMAGE_URL_LENGTH = 1000;
 const MAX_SOCIAL_URL_LENGTH = 500;
 
 interface PostComposerProps {
@@ -30,10 +30,9 @@ interface PostComposerProps {
     longitude?: number;
     socialUrl?: string;
   }) => Promise<void>;
-  showToast: (msg: string, type?: 'info' | 'success' | 'error') => void;
 }
 
-export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, showToast }) => {
+export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('');
@@ -57,7 +56,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      showToast('Image must be less than 5MB.', 'error');
+      toast.error('Image must be less than 5MB.');
       return;
     }
     setIsUploadingImage(true);
@@ -70,7 +69,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
       setImageUrl(url);
       setImagePreviewError(false);
     } catch (err) {
-      showToast('Failed to upload image.', 'error');
+      toast.error('Failed to upload image.');
     } finally {
       setIsUploadingImage(false);
       // Reset input value to allow uploading the same file again if removed
@@ -108,19 +107,19 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
 
   const handlePost = async () => {
     if (!user) {
-      showToast('You must be logged in to post.', 'error');
+      toast.error('You must be logged in to post.');
       return;
     }
     const trimmedContent = content.trim();
     const trimmedLoc = location.trim();
 
     if (!trimmedContent || !trimmedLoc) {
-      showToast('Please provide a description and location.', 'error');
+      toast.error('Please provide a description and location.');
       return;
     }
 
     if (trimmedContent.length > MAX_CONTENT_LENGTH) {
-      showToast(`Description must be under ${MAX_CONTENT_LENGTH} characters.`, 'error');
+      toast.error(`Description must be under ${MAX_CONTENT_LENGTH} characters.`);
       return;
     }
 
@@ -137,10 +136,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
         longitude,
         socialUrl: socialUrl.trim() || undefined,
       });
-      showToast('Issue reported successfully!', 'success');
+      toast.success('Issue reported successfully!');
       handleCancel();
     } catch (err) {
-      showToast('Failed to submit report.', 'error');
+      toast.error('Failed to submit report.');
     } finally {
       setIsPosting(false);
     }
@@ -148,7 +147,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
 
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
-      showToast('Geolocation is not supported by your browser.', 'error');
+      toast.error('Geolocation is not supported by your browser.');
       return;
     }
     setIsLocating(true);
@@ -160,10 +159,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
         setLongitude(lng);
         setLocation(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
         setIsLocating(false);
-        showToast('Location detected.', 'success');
+        toast.success('Location detected.');
       },
       (error) => {
-        showToast(`Failed to get location: ${error.message}`, 'error');
+        toast.error(`Failed to get location: ${error.message}`);
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -376,4 +375,3 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost, 
     </div>
   );
 };
-

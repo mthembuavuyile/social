@@ -107,7 +107,27 @@ export const PostCard: React.FC<PostCardProps> = ({
       )}
 
       {post.imageUrl && (
-        <img src={post.imageUrl} alt="Issue" style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }} />
+        <div style={{ marginBottom: '12px' }}>
+          <img src={post.imageUrl} alt="Issue" style={{ width: '100%', maxHeight: '400px', objectFit: 'cover', borderRadius: '8px' }} />
+          <div style={{ marginTop: '4px', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>Source:</span> 
+            <a 
+              href={post.imageUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ color: 'var(--accent-primary)', textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80%' }}
+              title={post.imageUrl}
+            >
+              {(() => {
+                try {
+                  return new URL(post.imageUrl).hostname;
+                } catch {
+                  return 'Image Link';
+                }
+              })()}
+            </a>
+          </div>
+        </div>
       )}
 
       {/* Status Controls — restricted to post owner */}
