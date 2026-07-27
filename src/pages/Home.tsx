@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { PostComposer } from '../components/Feed/PostComposer';
 import { PostCard } from '../components/Feed/PostCard';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -6,6 +6,7 @@ import { dbFirestore } from '../firebase';
 import toast from 'react-hot-toast';
 import { Post } from '../types';
 import { Sparkles, AlertCircle, CheckCircle2, Flame, Inbox } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 interface HomeProps {
   user: { uid: string; displayName: string } | null;
@@ -32,6 +33,8 @@ export const Home: React.FC<HomeProps> = ({
   updatePostStatus,
   deletePost,
 }) => {
+  const location = useLocation();
+
   const handleToggleReaction = async (postId: string, emoji: string) => {
     if (!user) {
       toast.error('You must be logged in to endorse issues.');
@@ -60,6 +63,31 @@ export const Home: React.FC<HomeProps> = ({
     
     await updateDoc(postRef, { reactions: newReactions, userReactions: newUserReactions });
   };
+
+  // Auto Scroll & Highlight target post if hash or query param is present
+  useEffect(() => {
+    if (postsLoading || posts.length === 0) return;
+
+    let targetId = '';
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#post-')) {
+      targetId = hash.replace('#post-', '');
+    } else {
+      const params = new URLSearchParams(location.search);
+      targetId = params.get('post') || '';
+    }
+
+    if (targetId) {
+      setTimeout(() => {
+        const el = document.getElementById(`post-${targetId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('post-card-highlighted');
+          setTimeout(() => el.classList.remove('post-card-highlighted'), 3000);
+        }
+      }, 300);
+    }
+  }, [location, postsLoading, posts]);
 
   // Filter Logic
   const filteredPosts = useMemo(() => {

@@ -9,6 +9,7 @@ import { AppLayout } from './components/Layout/AppLayout';
 import { Home } from './pages/Home';
 import { MapView } from './pages/MapView';
 import { Profile } from './pages/Profile';
+import { PostDetail } from './pages/PostDetail';
 import { PostComposer } from './components/Feed/PostComposer';
 import { Post } from './types';
 import { X } from 'lucide-react';
@@ -57,6 +58,10 @@ function AppContent() {
               deletePost={deletePost}
             />
           } 
+        />
+        <Route 
+          path="/post/:postId" 
+          element={<PostDetail user={user} />} 
         />
         <Route 
           path="/map" 

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Post } from '../../types';
 import { getInitials, getUserColor, timeAgo, formatRichTextReact, extractTwitterUrlFromText } from '../../utils';
-import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink } from 'lucide-react';
+import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink, Link2 } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 interface PostCardProps {
@@ -50,12 +51,13 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const twitterUrl = post.socialUrl || extractTwitterUrlFromText(post.content);
+  const directPostUrl = `${window.location.origin}/post/${post.id}`;
 
   const handleShare = async () => {
     const shareData = {
       title: `Civicly Report: ${post.category || 'Issue'}`,
       text: post.content.substring(0, 100) + '...',
-      url: window.location.href,
+      url: directPostUrl,
     };
 
     if (navigator.share) {
@@ -67,9 +69,9 @@ export const PostCard: React.FC<PostCardProps> = ({
       }
     }
 
-    navigator.clipboard.writeText(window.location.origin + '/#post-' + post.id);
+    navigator.clipboard.writeText(directPostUrl);
     setCopied(true);
-    toast.success('Report link copied to clipboard!');
+    toast.success('Exact post link copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -83,10 +85,10 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
           <div className="post-meta">
             <div className="post-author-name">{post.author}</div>
-            <div className="post-timestamp">
+            <Link to={`/post/${post.id}`} className="post-timestamp-link">
               <Clock size={12} />
               <span>{timeAgo(post.timestamp)}</span>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -101,6 +103,14 @@ export const PostCard: React.FC<PostCardProps> = ({
             )}
             {statusLabels[post.status || 'active']}
           </span>
+
+          <Link 
+            to={`/post/${post.id}`} 
+            className="btn-icon-secondary" 
+            title="Open Dedicated Post Page"
+          >
+            <Link2 size={15} />
+          </Link>
 
           {isOwner && (
             <button 
@@ -154,7 +164,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               rel="noopener noreferrer" 
               className="image-link"
             >
-              View Attachment Photo
+              View Full Attachment Photo
             </a>
           </div>
         </div>
@@ -205,10 +215,10 @@ export const PostCard: React.FC<PostCardProps> = ({
         <button 
           onClick={handleShare}
           className="action-btn share-btn"
-          title="Share Report Link"
+          title="Share Exact Post Link"
         >
           {copied ? <Check size={16} color="var(--accent-success)" /> : <Share2 size={16} />}
-          <span>{copied ? 'Copied' : 'Share'}</span>
+          <span>{copied ? 'Link Copied!' : 'Share Post Link'}</span>
         </button>
       </div>
     </article>

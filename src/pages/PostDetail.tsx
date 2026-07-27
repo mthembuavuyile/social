@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
 import { Post } from '../types';
 import { PostCard } from '../components/Feed/PostCard';
-import { ArrowLeft, Share2, MapPin, CheckCircle2, AlertTriangle, Clock, ThumbsUp, Copy, Check } from 'lucide-react';
-import { timeAgo, getInitials, getUserColor, formatRichTextReact } from '../utils';
-import { TwitterEmbed } from '../components/Feed/TwitterEmbed';
+import { ArrowLeft, Share2, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface PostDetailProps {
