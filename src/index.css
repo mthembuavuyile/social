@@ -1545,3 +1545,10 @@ html, body {
   color: var(--accent-danger);
   border-color: rgba(220, 38, 38, 0.3);
 }
+
+/* Post Action Button Mobile Styles */
+@media (max-width: 600px) {
+  .action-btn .action-label {
+    display: none;
+  }
+}

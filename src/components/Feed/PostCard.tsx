@@ -389,7 +389,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           title="Endorse & Confirm Urgency"
         >
           <ThumbsUp size={16} />
-          <span>{myUpvote ? 'Endorsed' : 'Endorse Issue'}</span>
+          <span className="action-label">{myUpvote ? 'Endorsed' : 'Endorse Issue'}</span>
           <span className="upvote-count-badge">{totalUpvotes}</span>
         </button>
 
@@ -399,7 +399,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           title="Toggle Comments"
         >
           <MessageSquare size={16} />
-          <span>Comments</span>
+          <span className="action-label">Comments</span>
           {post.commentsCount !== undefined && post.commentsCount > 0 && (
             <span className="comment-count-badge" style={{ marginLeft: '4px', fontSize: '0.8rem', opacity: 0.8 }}>{post.commentsCount}</span>
           )}
@@ -411,7 +411,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           title="Share Exact Post Link"
         >
           {copied ? <Check size={16} color="var(--accent-success)" /> : <Share2 size={16} />}
-          <span>{copied ? 'Link Copied!' : 'Share Post Link'}</span>
+          <span className="action-label">{copied ? 'Link Copied!' : 'Share Post Link'}</span>
         </button>
       </div>
 

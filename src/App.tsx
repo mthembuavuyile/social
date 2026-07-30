@@ -13,6 +13,7 @@ import { PostDetail } from './pages/PostDetail';
 import { Terms } from './pages/Terms';
 import { NotFound } from './pages/NotFound';
 import { EmergencyContacts } from './pages/EmergencyContacts';
+import { Alerts } from './pages/Alerts';
 import { PostComposer } from './components/Feed/PostComposer';
 import { Post } from './types';
 import { X } from 'lucide-react';
@@ -69,6 +70,19 @@ function AppContent() {
         <Route 
           path="/map" 
           element={<MapView user={user} />} 
+        />
+        <Route 
+          path="/alerts" 
+          element={
+            <Alerts 
+              user={user}
+              searchQuery={searchQuery}
+              posts={posts}
+              postsLoading={postsLoading}
+              updatePostStatus={updatePostStatus}
+              deletePost={deletePost}
+            />
+          } 
         />
         <Route 
           path="/emergency" 
