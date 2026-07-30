@@ -4,6 +4,21 @@ export type CrimeCategory = 'theft' | 'robbery' | 'assault' | 'burglary' | 'vand
 
 export type ReportType = 'civic' | 'crime';
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: number;
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  content: string;
+  author: string;
+  authorUid: string;
+  timestamp: number;
+}
+
 export interface Post {
   id: string;
   content: string; // Issue description
@@ -14,6 +29,11 @@ export interface Post {
   reactions?: Record<string, number>;
   userReactions?: Record<string, string>;
   
+  // Poll & Comments Data
+  pollOptions?: PollOption[];
+  pollExpiresAt?: number;
+  commentsCount?: number;
+
   // Shared Fields
   reportType?: ReportType; // 'civic' (default) or 'crime'
   category?: CivicCategory | CrimeCategory;

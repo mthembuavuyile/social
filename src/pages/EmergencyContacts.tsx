@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, Clock, Shield, ChevronDown, ChevronUp, ExternalLink, Search } from 'lucide-react';
+import { Phone, Clock, Shield, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { EMERGENCY_CATEGORIES, EmergencyContact, formatTelUri } from '../data/emergencyContacts';
 
 export const EmergencyContacts: React.FC = () => {

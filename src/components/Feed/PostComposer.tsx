@@ -38,6 +38,8 @@ interface PostComposerProps {
     policeContacted?: boolean;
     caseNumber?: string;
     anonymous?: boolean;
+    pollOptions?: { id: string, text: string, votes: number }[];
+    pollExpiresAt?: number;
   }) => Promise<void>;
 }
 
@@ -76,6 +78,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreviewError, setImagePreviewError] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Poll State
+  const [addPoll, setAddPoll] = useState(false);
+  const [pollOptions, setPollOptions] = useState([{ id: '1', text: '' }, { id: '2', text: '' }]);
+  const [pollExpiryDuration, setPollExpiryDuration] = useState('24'); // in hours
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -121,6 +128,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
     setPoliceContacted(false);
     setCaseNumber('');
     setAnonymous(false);
+    setAddPoll(false);
+    setPollOptions([{ id: '1', text: '' }, { id: '2', text: '' }]);
+    setPollExpiryDuration('24');
     setIsExpanded(false);
   };
 
@@ -204,6 +214,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
         postData.policeContacted = policeContacted;
         if (caseNumber.trim()) postData.caseNumber = caseNumber.trim();
         postData.anonymous = anonymous;
+      }
+
+      if (addPoll) {
+        const validOptions = pollOptions.filter(o => o.text.trim().length > 0);
+        if (validOptions.length >= 2) {
+          postData.pollOptions = validOptions.map((o, index) => ({ id: index.toString(), text: o.text.trim(), votes: 0 }));
+          postData.pollExpiresAt = Date.now() + (parseInt(pollExpiryDuration) * 60 * 60 * 1000);
+        }
       }
 
       await onSubmitPost(postData);
@@ -771,6 +789,49 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
               Max size: 5MB (JPEG, PNG, GIF, WebP)
             </p>
           </div>
+
+          {/* Poll Feature Toggle */}
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+            <label style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
+              <input type="checkbox" checked={addPoll} onChange={(e) => setAddPoll(e.target.checked)} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} />
+              📊 Add a Community Poll
+            </label>
+          </div>
+
+          {addPoll && (
+            <div style={{ padding: '16px', background: 'var(--surface-hover)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {pollOptions.map((opt, idx) => (
+                <input
+                  key={opt.id}
+                  type="text"
+                  placeholder={`Option ${idx + 1}`}
+                  value={opt.text}
+                  onChange={(e) => {
+                    const newOpts = [...pollOptions];
+                    newOpts[idx].text = e.target.value;
+                    setPollOptions(newOpts);
+                  }}
+                  className="standard-input"
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+                />
+              ))}
+              {pollOptions.length < 4 && (
+                <button type="button" onClick={() => setPollOptions([...pollOptions, { id: Date.now().toString(), text: '' }])} style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: '4px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}>
+                  + Add Option
+                </button>
+              )}
+              
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Poll Duration:</label>
+                <select value={pollExpiryDuration} onChange={(e) => setPollExpiryDuration(e.target.value)} style={{ padding: '6px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
+                  <option value="8">8 Hours</option>
+                  <option value="12">12 Hours</option>
+                  <option value="24">24 Hours</option>
+                  <option value="48">48 Hours</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="composer-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>

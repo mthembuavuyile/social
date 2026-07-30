@@ -1420,3 +1420,116 @@ html, body {
   }
 }
 
+/* Post Composer Report Type Toggle */
+.report-type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.report-type-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.report-type-btn:hover {
+  background: var(--surface-color-hover);
+  color: var(--text-main);
+}
+
+.report-type-btn.active {
+  color: white;
+  border-color: transparent;
+}
+
+.report-type-btn.active.civic {
+  background: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(29, 155, 240, 0.25);
+}
+
+.report-type-btn.active.crime {
+  background: var(--accent-danger);
+  box-shadow: 0 4px 12px rgba(244, 33, 46, 0.25);
+}
+
+/* Emergency Widget Styles */
+.emergency-widget {
+  background: linear-gradient(180deg, var(--surface-color) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+}
+
+.emergency-quick-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.emergency-quick-number {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--emergency-color);
+  color: var(--text-main);
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.emergency-quick-number:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: var(--border-color-hover);
+}
+
+.eq-label {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.eq-number {
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.emergency-view-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.emergency-view-all:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--accent-danger);
+  border-color: rgba(220, 38, 38, 0.3);
+}

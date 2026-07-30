@@ -1,4 +1,3 @@
-import { Shield, Phone, Heart, Building2, Brain } from 'lucide-react';
 
 export interface EmergencyContact {
   name: string;

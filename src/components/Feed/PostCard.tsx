@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Post } from '../../types';
+import { Post, Comment } from '../../types';
 import { getInitials, getUserColor, timeAgo, formatRichTextReact, extractTwitterUrlFromText } from '../../utils';
-import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink, Link2, Shield, Phone, FileText, EyeOff } from 'lucide-react';
+import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink, Link2, Shield, Phone, FileText, EyeOff, MessageSquare } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
+import { PollView } from './PollView';
+import { CommentSection } from './CommentSection';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { formatTelUri } from '../../data/emergencyContacts';
@@ -13,6 +15,9 @@ interface PostCardProps {
   onToggleReaction: (postId: string, emoji: string) => void;
   onDeletePost: (postId: string) => void;
   onUpdateStatus: (postId: string, status: 'active' | 'in_progress' | 'resolved') => void;
+  onVoteOnPoll?: (postId: string, optionId: string) => void;
+  onAddComment?: (postId: string, text: string) => void;
+  fetchComments?: (postId: string) => Promise<Comment[]>;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -21,13 +26,21 @@ export const PostCard: React.FC<PostCardProps> = ({
   onToggleReaction,
   onDeletePost,
   onUpdateStatus,
+  onVoteOnPoll,
+  onAddComment,
+  fetchComments,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  
   const totalUpvotes = post.reactions?.['👍'] || 0;
   const myUpvote = user && post.userReactions?.['👍'] === '👍';
   const isOwner = user?.uid === post.authorUid;
   const isCrime = post.reportType === 'crime';
   const isAnonymous = isCrime && post.anonymous;
+
 
   const displayAuthor = isAnonymous ? 'Anonymous Citizen' : post.author;
   const authorInitials = isAnonymous ? '?' : getInitials(post.author);
@@ -75,6 +88,38 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const twitterUrl = post.socialUrl || extractTwitterUrlFromText(post.content);
   const directPostUrl = `${window.location.origin}/post/${post.id}`;
+
+  const handleToggleComments = async () => {
+    setShowComments(!showComments);
+    if (!showComments && comments.length === 0 && fetchComments) {
+      setIsLoadingComments(true);
+      try {
+        const fetched = await fetchComments(post.id);
+        setComments(fetched);
+      } catch (e) {
+        console.error('Failed to fetch comments', e);
+      } finally {
+        setIsLoadingComments(false);
+      }
+    }
+  };
+
+  const handleAddComment = (postId: string, text: string) => {
+    if (onAddComment) {
+      onAddComment(postId, text);
+      if (user) {
+        const newComment: Comment = {
+          id: Date.now().toString(),
+          postId,
+          content: text,
+          author: user.displayName,
+          authorUid: user.uid,
+          timestamp: Date.now(),
+        };
+        setComments([...comments, newComment]);
+      }
+    }
+  };
 
   const handleShare = async () => {
     const shareData = {
@@ -214,6 +259,16 @@ export const PostCard: React.FC<PostCardProps> = ({
         {formatRichTextReact(post.content)}
       </div>
 
+      {/* Poll View */}
+      {post.pollOptions && post.pollOptions.length > 0 && (
+        <PollView 
+          options={post.pollOptions} 
+          expiresAt={post.pollExpiresAt} 
+          onVote={(optionId) => onVoteOnPoll && onVoteOnPoll(post.id, optionId)}
+          userVotedId={null} // TODO: hook up to user data if needed
+        />
+      )}
+
       {/* Emergency CTA for high-urgency crime reports */}
       {isCrime && (post.crimeUrgency === 'high' || post.crimeUrgency === 'emergency') && post.status !== 'resolved' && (
         <div className="crime-emergency-cta">
@@ -294,6 +349,18 @@ export const PostCard: React.FC<PostCardProps> = ({
         </button>
 
         <button 
+          onClick={handleToggleComments}
+          className={`action-btn comment-btn ${showComments ? 'active' : ''}`}
+          title="Toggle Comments"
+        >
+          <MessageSquare size={16} />
+          <span>Comments</span>
+          {post.commentsCount !== undefined && post.commentsCount > 0 && (
+            <span className="comment-count-badge" style={{ marginLeft: '4px', fontSize: '0.8rem', opacity: 0.8 }}>{post.commentsCount}</span>
+          )}
+        </button>
+
+        <button 
           onClick={handleShare}
           className="action-btn share-btn"
           title="Share Exact Post Link"
@@ -302,6 +369,21 @@ export const PostCard: React.FC<PostCardProps> = ({
           <span>{copied ? 'Link Copied!' : 'Share Post Link'}</span>
         </button>
       </div>
+
+      {/* Comments Section */}
+      {showComments && (
+        isLoadingComments ? (
+          <div style={{ textAlign: 'center', padding: '16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Loading comments...</div>
+        ) : (
+          <CommentSection 
+            postId={post.id}
+            comments={comments}
+            user={user}
+            onAddComment={handleAddComment}
+            isAnonymousPost={isAnonymous}
+          />
+        )
+      )}
     </article>
   );
 };
