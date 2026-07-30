@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, 
   MapPin, 
@@ -27,6 +27,10 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   activeFilter = 'all',
   onSelectFilter,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+
   const authorName = user?.displayName || 'Citizen';
   const authorInitials = getInitials(authorName);
   const [avatarBg] = getUserColor(authorName);
@@ -46,6 +50,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
 
       {/* Primary Navigation Menu */}
       <nav className="sidebar-nav">
+        <div style={{ marginTop: '8px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 700, paddingLeft: '16px', marginBottom: '8px', letterSpacing: '0.05em' }}>Civic Hub</div>
         <NavLink 
           to="/" 
           end
@@ -56,6 +61,22 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <span>Home Feed</span>
         </NavLink>
 
+        <button 
+          className={`sidebar-link btn-link ${isHome && activeFilter === 'active' ? 'active' : ''}`}
+          onClick={() => { onSelectFilter?.('active'); navigate('/'); }}
+        >
+          <AlertTriangle size={20} color="#f4212e" />
+          <span>Open Issues</span>
+        </button>
+
+        <button 
+          className={`sidebar-link btn-link ${isHome && activeFilter === 'resolved' ? 'active' : ''}`}
+          onClick={() => { onSelectFilter?.('resolved'); navigate('/'); }}
+        >
+          <CheckCircle2 size={20} color="var(--accent-success)" />
+          <span>Resolved</span>
+        </button>
+
         <NavLink 
           to="/map" 
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
@@ -64,36 +85,22 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <span>Interactive Map</span>
         </NavLink>
 
+        <div style={{ marginTop: '24px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 700, paddingLeft: '16px', marginBottom: '8px', letterSpacing: '0.05em' }}>Safety & Crime</div>
+        
         <button 
-          className={`sidebar-link btn-link ${activeFilter === 'active' ? 'active' : ''}`}
-          onClick={() => onSelectFilter?.('active')}
-        >
-          <AlertTriangle size={20} color="#f4212e" />
-          <span>Open Issues</span>
-        </button>
-
-        <button 
-          className={`sidebar-link btn-link ${activeFilter === 'resolved' ? 'active' : ''}`}
-          onClick={() => onSelectFilter?.('resolved')}
-        >
-          <CheckCircle2 size={20} color="var(--accent-success)" />
-          <span>Resolved</span>
-        </button>
-
-        <button 
-          className={`sidebar-link btn-link ${activeFilter === 'urgent' ? 'active' : ''}`}
-          onClick={() => onSelectFilter?.('urgent')}
-        >
-          <Activity size={20} color="#ff9a00" />
-          <span>High Urgency</span>
-        </button>
-
-        <button 
-          className={`sidebar-link btn-link ${activeFilter === 'crime' ? 'active' : ''}`}
-          onClick={() => onSelectFilter?.('crime')}
+          className={`sidebar-link btn-link ${isHome && activeFilter === 'crime' ? 'active' : ''}`}
+          onClick={() => { onSelectFilter?.('crime'); navigate('/'); }}
         >
           <Shield size={20} color="#dc2626" />
           <span>Crime Reports</span>
+        </button>
+        
+        <button 
+          className={`sidebar-link btn-link ${isHome && activeFilter === 'urgent' ? 'active' : ''}`}
+          onClick={() => { onSelectFilter?.('urgent'); navigate('/'); }}
+        >
+          <Activity size={20} color="#ff9a00" />
+          <span>High Urgency</span>
         </button>
 
         <NavLink 
@@ -104,6 +111,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <span>Emergency Lines</span>
         </NavLink>
 
+        <div style={{ marginTop: '24px', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 700, paddingLeft: '16px', marginBottom: '8px', letterSpacing: '0.05em' }}>Account</div>
+        
         <NavLink 
           to="/profile" 
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
