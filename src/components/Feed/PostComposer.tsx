@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { getInitials, getUserColor, extractTwitterUrlFromText, parseTwitterUrl } from '../../utils';
 import { X, Send, MapPin, Loader2, Image as ImageIcon } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
@@ -46,6 +46,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
   const [longitude, setLongitude] = useState<number | undefined>(undefined);
   const [isLocating, setIsLocating] = useState(false);
+
+  // Location Autocomplete
+  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([])
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const locationWrapperRef = useRef<HTMLDivElement>(null);
 
   // Image Upload State
   const [imageUrl, setImageUrl] = useState('');
@@ -175,7 +181,53 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
         const lng = position.coords.longitude;
         setLatitude(lat);
         setLongitude(lng);
-        setLocation(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+
+        // Reverse geocode to get real address
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          if (data && data.address) {
+            const addr = data.address;
+            // Build a concise, readable address
+            const parts: string[] = [];
+            if (addr.road) parts.push(addr.road);
+            if (addr.house_number) parts[0] = `${addr.house_number} ${parts[0] || ''}`;
+            if (addr.suburb) parts.push(addr.suburb);
+            if (addr.city || addr.town || addr.village) {
+              const cityName = addr.city || addr.town || addr.village;
+              parts.push(cityName);
+              if (!city) setCity(cityName);
+            }
+            const readable = parts.filter(Boolean).join(', ') || data.display_name;
+            setLocation(readable.substring(0, MAX_LOCATION_LENGTH));
+
+            // Auto-fill province if detected
+            if (addr.state) {
+              const provinceMap: Record<string, string> = {
+                'gauteng': 'Gauteng',
+                'western cape': 'Western Cape',
+                'eastern cape': 'Eastern Cape',
+                'kwazulu-natal': 'KwaZulu-Natal',
+                'free state': 'Free State',
+                'limpopo': 'Limpopo',
+                'mpumalanga': 'Mpumalanga',
+                'north west': 'North West',
+                'northern cape': 'Northern Cape',
+              };
+              const matched = provinceMap[addr.state.toLowerCase()];
+              if (matched) setProvince(matched);
+            }
+          } else {
+            setLocation(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+          }
+        } catch {
+          // Fallback to coordinates if reverse geocoding fails
+          setLocation(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+        }
+
         setIsLocating(false);
         toast.success('Location detected.');
       },
@@ -185,6 +237,96 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
+  };
+
+  // Fetch location suggestions from Nominatim as user types
+  const fetchLocationSuggestions = useCallback(async (query: string) => {
+    if (query.trim().length < 3) {
+      setLocationSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    try {
+      const searchQuery = encodeURIComponent(`${query}, ${province}, South Africa`);
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=5&addressdetails=1&countrycodes=za`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setLocationSuggestions(data);
+        setShowSuggestions(true);
+      } else {
+        setLocationSuggestions([]);
+        setShowSuggestions(false);
+      }
+    } catch {
+      setLocationSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [province]);
+
+  const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val.length <= MAX_LOCATION_LENGTH) {
+      setLocation(val);
+      // Clear GPS coords when manually typing
+      setLatitude(undefined);
+      setLongitude(undefined);
+    }
+
+    // Debounce the autocomplete API calls
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchLocationSuggestions(val);
+    }, 400);
+  };
+
+  const handleSelectSuggestion = (suggestion: { display_name: string; lat: string; lon: string; address?: any }) => {
+    const lat = parseFloat(suggestion.lat);
+    const lon = parseFloat(suggestion.lon);
+    setLatitude(lat);
+    setLongitude(lon);
+
+    // Build concise location from display_name
+    const addr = suggestion.address;
+    if (addr) {
+      const parts: string[] = [];
+      if (addr.road) parts.push(addr.road);
+      if (addr.house_number && parts.length > 0) parts[0] = `${addr.house_number} ${parts[0]}`;
+      if (addr.suburb) parts.push(addr.suburb);
+      if (addr.city || addr.town || addr.village) {
+        const cityName = addr.city || addr.town || addr.village;
+        parts.push(cityName);
+        if (!city) setCity(cityName);
+      }
+      const readable = parts.filter(Boolean).join(', ') || suggestion.display_name;
+      setLocation(readable.substring(0, MAX_LOCATION_LENGTH));
+
+      // Auto-fill province
+      if (addr.state) {
+        const provinceMap: Record<string, string> = {
+          'gauteng': 'Gauteng',
+          'western cape': 'Western Cape',
+          'eastern cape': 'Eastern Cape',
+          'kwazulu-natal': 'KwaZulu-Natal',
+          'free state': 'Free State',
+          'limpopo': 'Limpopo',
+          'mpumalanga': 'Mpumalanga',
+          'north west': 'North West',
+          'northern cape': 'Northern Cape',
+        };
+        const matched = provinceMap[addr.state.toLowerCase()];
+        if (matched) setProvince(matched);
+      }
+    } else {
+      // Fallback: use full display name
+      const shortName = suggestion.display_name.split(',').slice(0, 3).join(',').trim();
+      setLocation(shortName.substring(0, MAX_LOCATION_LENGTH));
+    }
+
+    setShowSuggestions(false);
+    setLocationSuggestions([]);
   };
 
   const handleRemoveImage = () => {
@@ -273,24 +415,82 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
           <div className="form-group">
             <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Location</label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                className="standard-input"
-                placeholder="e.g. Lancaster street, Grosvenor"
-                value={location}
-                onChange={(e) => {
-                  if (e.target.value.length <= MAX_LOCATION_LENGTH) {
-                    setLocation(e.target.value);
-                  }
-                }}
-                maxLength={MAX_LOCATION_LENGTH}
-                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
-              />
-              <button type="button" onClick={handleDetectLocation} disabled={isLocating} style={{ padding: '8px 12px', borderRadius: '4px', background: 'var(--accent-primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <div ref={locationWrapperRef} style={{ position: 'relative', flex: 1 }}>
+                <input
+                  type="text"
+                  className="standard-input"
+                  placeholder="Start typing a street, suburb, or area..."
+                  value={location}
+                  onChange={handleLocationInputChange}
+                  onFocus={() => { if (locationSuggestions.length > 0) setShowSuggestions(true); }}
+                  onBlur={() => { setTimeout(() => setShowSuggestions(false), 200); }}
+                  autoComplete="off"
+                  maxLength={MAX_LOCATION_LENGTH}
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+                />
+                {showSuggestions && locationSuggestions.length > 0 && (
+                  <ul style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 9999,
+                    background: 'var(--card-bg, #16181c)',
+                    border: '1px solid var(--border-color)',
+                    borderTop: 'none',
+                    borderRadius: '0 0 8px 8px',
+                    listStyle: 'none',
+                    margin: 0,
+                    padding: 0,
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  }}>
+                    {locationSuggestions.map((s, i) => {
+                      // Show a concise version for the list
+                      const parts = s.display_name.split(',').map(p => p.trim());
+                      const shortLabel = parts.slice(0, 3).join(', ');
+                      return (
+                        <li
+                          key={`${s.lat}-${s.lon}-${i}`}
+                          onMouseDown={() => handleSelectSuggestion(s)}
+                          style={{
+                            padding: '10px 12px',
+                            cursor: 'pointer',
+                            fontSize: '0.82rem',
+                            color: 'var(--text-main)',
+                            borderBottom: i < locationSuggestions.length - 1 ? '1px solid var(--border-color)' : 'none',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '8px',
+                            transition: 'background 0.15s',
+                          }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-color, #1d1f23)'; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                        >
+                          <MapPin size={14} style={{ marginTop: '2px', flexShrink: 0, color: 'var(--accent-primary)' }} />
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{shortLabel}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {parts.slice(3).join(', ')}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+              <button type="button" onClick={handleDetectLocation} disabled={isLocating} style={{ padding: '8px 12px', borderRadius: '4px', background: 'var(--accent-primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 {isLocating ? <Loader2 className="animate-spin" size={14} /> : <MapPin size={14} />}
                 GPS
               </button>
             </div>
+            {latitude !== undefined && longitude !== undefined && (
+              <p style={{ fontSize: '0.7rem', color: 'var(--accent-success)', marginTop: '4px', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <MapPin size={10} /> GPS coordinates attached ({latitude.toFixed(4)}, {longitude.toFixed(4)})
+              </p>
+            )}
           </div>
 
           <div className="form-group">
