@@ -12,6 +12,7 @@ import { Profile } from './pages/Profile';
 import { PostDetail } from './pages/PostDetail';
 import { Terms } from './pages/Terms';
 import { NotFound } from './pages/NotFound';
+import { EmergencyContacts } from './pages/EmergencyContacts';
 import { PostComposer } from './components/Feed/PostComposer';
 import { Post } from './types';
 import { X } from 'lucide-react';
@@ -70,6 +71,10 @@ function AppContent() {
           element={<MapView user={user} />} 
         />
         <Route 
+          path="/emergency" 
+          element={<EmergencyContacts />} 
+        />
+        <Route 
           path="/profile" 
           element={<Profile user={user} updateUserName={updateUserName} />} 
         />
@@ -121,6 +126,12 @@ function AppContent() {
                   category: data.category as Post['category'],
                   author: user?.displayName || 'Citizen',
                   authorUid: user?.uid || '',
+                  reportType: data.reportType,
+                  crimeUrgency: data.crimeUrgency as Post['crimeUrgency'],
+                  incidentTime: data.incidentTime,
+                  policeContacted: data.policeContacted,
+                  caseNumber: data.caseNumber,
+                  anonymous: data.anonymous,
                 });
                 setIsComposerModalOpen(false);
               }}

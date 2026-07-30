@@ -1,10 +1,12 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { getInitials, getUserColor, extractTwitterUrlFromText, parseTwitterUrl } from '../../utils';
-import { X, Send, MapPin, Loader2, Image as ImageIcon } from 'lucide-react';
+import { X, Send, MapPin, Loader2, Image as ImageIcon, Shield, AlertTriangle, Phone, FileText, EyeOff, Clock } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
 import { storage } from '../../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import toast from 'react-hot-toast';
+import { ReportType } from '../../types';
+import { getContactsForCategory, formatTelUri } from '../../data/emergencyContacts';
 
 const XIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = '#1d9bf0' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
@@ -16,6 +18,7 @@ const MAX_CONTENT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 200;
 const MAX_CITY_LENGTH = 100;
 const MAX_SOCIAL_URL_LENGTH = 500;
+const MAX_CASE_NUMBER_LENGTH = 50;
 
 interface PostComposerProps {
   user: { uid: string; displayName: string } | null;
@@ -29,6 +32,12 @@ interface PostComposerProps {
     latitude?: number;
     longitude?: number;
     socialUrl?: string;
+    reportType?: ReportType;
+    crimeUrgency?: string;
+    incidentTime?: string;
+    policeContacted?: boolean;
+    caseNumber?: string;
+    anonymous?: boolean;
   }) => Promise<void>;
 }
 
@@ -41,6 +50,16 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
   const [category, setCategory] = useState('pothole');
   const [socialUrl, setSocialUrl] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+
+  // Report Type
+  const [reportType, setReportType] = useState<ReportType>('civic');
+
+  // Crime-specific fields
+  const [crimeUrgency, setCrimeUrgency] = useState('medium');
+  const [incidentTime, setIncidentTime] = useState('');
+  const [policeContacted, setPoliceContacted] = useState(false);
+  const [caseNumber, setCaseNumber] = useState('');
+  const [anonymous, setAnonymous] = useState(false);
 
   // Geolocation
   const [latitude, setLatitude] = useState<number | undefined>(undefined);
@@ -92,11 +111,27 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
     setLocation('');
     setProvince('Gauteng');
     setCity('');
-    setCategory('pothole');
+    setCategory(reportType === 'crime' ? 'theft' : 'pothole');
     setSocialUrl('');
     setLatitude(undefined);
     setLongitude(undefined);
+    setReportType('civic');
+    setCrimeUrgency('medium');
+    setIncidentTime('');
+    setPoliceContacted(false);
+    setCaseNumber('');
+    setAnonymous(false);
     setIsExpanded(false);
+  };
+
+  const handleReportTypeChange = (type: ReportType) => {
+    setReportType(type);
+    // Reset category to the first option for the new type
+    if (type === 'crime') {
+      setCategory('theft');
+    } else {
+      setCategory('pothole');
+    }
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -149,7 +184,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
     }
 
     try {
-      await onSubmitPost({
+      const postData: Parameters<typeof onSubmitPost>[0] = {
         content: trimmedContent,
         imageUrl: imageUrl.trim(),
         category,
@@ -159,8 +194,20 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
         latitude: finalLat,
         longitude: finalLng,
         socialUrl: socialUrl.trim() || undefined,
-      });
-      toast.success('Issue reported successfully!');
+        reportType,
+      };
+
+      // Add crime-specific fields only for crime reports
+      if (reportType === 'crime') {
+        postData.crimeUrgency = crimeUrgency;
+        if (incidentTime) postData.incidentTime = incidentTime;
+        postData.policeContacted = policeContacted;
+        if (caseNumber.trim()) postData.caseNumber = caseNumber.trim();
+        postData.anonymous = anonymous;
+      }
+
+      await onSubmitPost(postData);
+      toast.success(reportType === 'crime' ? 'Crime report submitted!' : 'Issue reported successfully!');
       handleCancel();
     } catch (err) {
       toast.error('Failed to submit report.');
@@ -341,13 +388,18 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
   const hasValidImageUrl = imageUrl.trim().length > 0 && !imagePreviewError;
   const hasValidTwitterUrl = Boolean(parseTwitterUrl(socialUrl.trim()));
 
+  const isCrime = reportType === 'crime';
+
   return (
-    <div className="composer">
+    <div className={`composer ${isCrime ? 'composer--crime' : ''}`}>
       <div className="composer-top">
         <div className="user-avatar" style={avatarStyle}>{initials}</div>
         <textarea
           className="compose-input"
-          placeholder="Report a civic issue or paste an X/Twitter post link..."
+          placeholder={isCrime 
+            ? "Describe the crime incident — what happened, when, any details that could help the community stay safe..." 
+            : "Report a civic issue or paste an X/Twitter post link..."
+          }
           rows={isExpanded ? 3 : 1}
           value={content}
           onChange={handleContentChange}
@@ -384,16 +436,61 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
 
       <div className={`composer-extras ${isExpanded ? 'active' : ''}`} style={{ display: isExpanded ? 'block' : 'none', marginTop: '12px' }}>
         <div className="extras-inputs" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+          {/* Report Type Toggle */}
+          <div className="report-type-toggle">
+            <button
+              type="button"
+              className={`report-type-btn ${reportType === 'civic' ? 'active civic' : ''}`}
+              onClick={() => handleReportTypeChange('civic')}
+            >
+              <AlertTriangle size={16} />
+              <span>Civic Issue</span>
+            </button>
+            <button
+              type="button"
+              className={`report-type-btn ${reportType === 'crime' ? 'active crime' : ''}`}
+              onClick={() => handleReportTypeChange('crime')}
+            >
+              <Shield size={16} />
+              <span>Crime Report</span>
+            </button>
+          </div>
+
+          {/* Safety Disclaimer for Crime Reports with Contextual Numbers */}
+          {isCrime && (
+            <CrimeSafetyBanner category={category} />
+          )}
+
           <div className="composer-responsive-grid">
             <div className="form-group">
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Category</label>
+              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                {isCrime ? 'Crime Type' : 'Category'}
+              </label>
               <select className="standard-input" value={category} onChange={(e) => setCategory(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
-                <option value="pothole">🕳 Pothole</option>
-                <option value="water_leak">🚰 Water Leak</option>
-                <option value="electricity">⚡ Electricity Outage</option>
-                <option value="sewage">💩 Sewage Overflow</option>
-                <option value="traffic_light">🚥 Broken Traffic Light</option>
-                <option value="other">🛠 Other</option>
+                {isCrime ? (
+                  <>
+                    <option value="theft">🔓 Theft</option>
+                    <option value="robbery">🔪 Robbery</option>
+                    <option value="assault">🚨 Assault</option>
+                    <option value="burglary">🏠 Burglary / Break-in</option>
+                    <option value="vandalism">💥 Vandalism</option>
+                    <option value="hijacking">🚗 Hijacking / Carjacking</option>
+                    <option value="drug_activity">💊 Drug Activity</option>
+                    <option value="fraud">📋 Fraud / Scam</option>
+                    <option value="domestic_violence">🤝 Domestic Violence</option>
+                    <option value="crime_other">🔍 Other Crime</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="pothole">🕳 Pothole</option>
+                    <option value="water_leak">🚰 Water Leak</option>
+                    <option value="electricity">⚡ Electricity Outage</option>
+                    <option value="sewage">💩 Sewage Overflow</option>
+                    <option value="traffic_light">🚥 Broken Traffic Light</option>
+                    <option value="other">🛠 Other</option>
+                  </>
+                )}
               </select>
             </div>
             <div className="form-group">
@@ -412,6 +509,39 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
             </div>
           </div>
 
+          {/* Crime-specific: Urgency & Incident Time */}
+          {isCrime && (
+            <div className="composer-responsive-grid">
+              <div className="form-group">
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Urgency Level</label>
+                <select 
+                  className="standard-input" 
+                  value={crimeUrgency} 
+                  onChange={(e) => setCrimeUrgency(e.target.value)} 
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
+                >
+                  <option value="low">🟢 Low — Informational</option>
+                  <option value="medium">🟡 Medium — Caution</option>
+                  <option value="high">🟠 High — Danger</option>
+                  <option value="emergency">🔴 Emergency — Immediate Threat</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <Clock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  When did this happen?
+                </label>
+                <input
+                  type="datetime-local"
+                  className="standard-input"
+                  value={incidentTime}
+                  onChange={(e) => setIncidentTime(e.target.value)}
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="form-group">
             <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Location</label>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -419,7 +549,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
                 <input
                   type="text"
                   className="standard-input"
-                  placeholder="Start typing a street, suburb, or area..."
+                  placeholder={isCrime ? "Where did the crime occur? Street, suburb, area..." : "Start typing a street, suburb, or area..."}
                   value={location}
                   onChange={handleLocationInputChange}
                   onFocus={() => { if (locationSuggestions.length > 0) setShowSuggestions(true); }}
@@ -510,6 +640,67 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
             />
           </div>
 
+          {/* Crime-specific: Police Contact & Case Number */}
+          {isCrime && (
+            <div className="crime-police-section">
+              <div className="form-group">
+                <label className="checkbox-label" style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={policeContacted}
+                    onChange={(e) => setPoliceContacted(e.target.checked)}
+                    className="crime-checkbox"
+                  />
+                  <Phone size={14} />
+                  Police / SAPS have been contacted
+                </label>
+              </div>
+
+              {policeContacted && (
+                <div className="form-group" style={{ marginTop: '8px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <FileText size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                    SAPS Case Number (optional)
+                  </label>
+                  <input
+                    type="text"
+                    className="standard-input"
+                    placeholder="e.g. CAS 123/04/2026"
+                    value={caseNumber}
+                    onChange={(e) => {
+                      if (e.target.value.length <= MAX_CASE_NUMBER_LENGTH) {
+                        setCaseNumber(e.target.value);
+                      }
+                    }}
+                    maxLength={MAX_CASE_NUMBER_LENGTH}
+                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Crime-specific: Anonymous Toggle */}
+          {isCrime && (
+            <div className="form-group">
+              <label className="checkbox-label" style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={anonymous}
+                  onChange={(e) => setAnonymous(e.target.checked)}
+                  className="crime-checkbox"
+                />
+                <EyeOff size={14} />
+                Post anonymously for safety
+              </label>
+              {anonymous && (
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0, marginLeft: '26px' }}>
+                  Your name will be hidden from the public. Your account ID is still stored for moderation purposes.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="form-group">
             <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Social Media Link (X / Twitter)</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -584,12 +775,52 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
 
         <div className="composer-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button className="btn-cancel" onClick={handleCancel} disabled={isPosting} style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
-          <button className="btn-primary" onClick={handlePost} disabled={isPosting || !content.trim() || !location.trim()} style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', opacity: isPosting || !content.trim() || !location.trim() ? 0.5 : 1 }}>
-            <Send size={14} />
-            {isPosting ? 'Submitting...' : 'Submit Report'}
+          <button 
+            className={`btn-primary ${isCrime ? 'btn-crime-submit' : ''}`}
+            onClick={handlePost} 
+            disabled={isPosting || !content.trim() || !location.trim()} 
+            style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: isCrime ? 'var(--crime-accent, #dc2626)' : 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', opacity: isPosting || !content.trim() || !location.trim() ? 0.5 : 1 }}
+          >
+            {isCrime ? <Shield size={14} /> : <Send size={14} />}
+            {isPosting ? 'Submitting...' : isCrime ? 'Submit Crime Report' : 'Submit Report'}
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+/** Contextual safety banner showing relevant emergency numbers for the selected crime category */
+const CrimeSafetyBanner: React.FC<{ category: string }> = ({ category }) => {
+  const relevantContacts = useMemo(
+    () => getContactsForCategory(category, 'crime').slice(0, 3),
+    [category]
+  );
+
+  return (
+    <div className="crime-safety-banner">
+      <div className="crime-safety-banner-header">
+        <Phone size={14} />
+        <div>
+          <strong>In an emergency, call <a href="tel:10111" className="emergency-inline-link">10111</a> (SAPS) or <a href="tel:112" className="emergency-inline-link">112</a> immediately.</strong>
+          <span> This platform is for community awareness — not a substitute for emergency services.</span>
+        </div>
+      </div>
+      {relevantContacts.length > 0 && (
+        <div className="crime-safety-contacts">
+          {relevantContacts.map((contact, i) => (
+            <a
+              key={i}
+              href={formatTelUri(contact.number)}
+              className="crime-safety-contact-chip"
+            >
+              <Phone size={10} />
+              <span className="contact-chip-name">{contact.name}</span>
+              <span className="contact-chip-number">{contact.number}</span>
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

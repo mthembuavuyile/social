@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
 import toast from 'react-hot-toast';
 import { Post } from '../types';
-import { Sparkles, AlertCircle, CheckCircle2, Flame, Inbox } from 'lucide-react';
+import { Sparkles, AlertCircle, CheckCircle2, Flame, Inbox, Shield } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 interface HomeProps {
@@ -92,9 +92,10 @@ export const Home: React.FC<HomeProps> = ({
   // Filter Logic
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
-      // 1. Status/Urgency Filter
+      // 1. Status/Urgency/Type Filter
       if (activeFilter === 'active' && post.status !== 'active') return false;
       if (activeFilter === 'resolved' && post.status !== 'resolved') return false;
+      if (activeFilter === 'crime' && post.reportType !== 'crime') return false;
       if (activeFilter === 'urgent') {
         const upvotes = post.reactions?.['👍'] || 0;
         if (upvotes < 1 && post.status === 'resolved') return false;
@@ -142,6 +143,7 @@ export const Home: React.FC<HomeProps> = ({
             await createPost({
               ...data,
               category: data.category as Post['category'],
+              crimeUrgency: data.crimeUrgency as Post['crimeUrgency'],
               author: user?.displayName || 'Citizen',
               authorUid: user?.uid || '',
             });
@@ -184,6 +186,14 @@ export const Home: React.FC<HomeProps> = ({
           >
             <CheckCircle2 size={16} color="var(--accent-success)" />
             <span>Resolved</span>
+          </button>
+
+          <button 
+            className={`feed-tab ${activeFilter === 'crime' ? 'active' : ''}`}
+            onClick={() => onSelectFilter('crime')}
+          >
+            <Shield size={16} color="#dc2626" />
+            <span>Crime</span>
           </button>
         </div>
       </div>

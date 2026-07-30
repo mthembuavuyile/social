@@ -25,7 +25,8 @@ export function usePosts() {
           reactions: data.reactions || {},
           userReactions: data.userReactions || {},
           
-          // Civic fields
+          // Shared fields
+          reportType: data.reportType || 'civic',
           category: data.category,
           location: data.location,
           province: data.province,
@@ -34,6 +35,13 @@ export function usePosts() {
           latitude: data.latitude,
           longitude: data.longitude,
           socialUrl: data.socialUrl,
+
+          // Crime-specific fields
+          crimeUrgency: data.crimeUrgency,
+          incidentTime: data.incidentTime,
+          policeContacted: data.policeContacted,
+          caseNumber: data.caseNumber,
+          anonymous: data.anonymous,
         });
       });
       setPosts(postsArray);

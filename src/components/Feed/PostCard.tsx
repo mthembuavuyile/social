@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Post } from '../../types';
 import { getInitials, getUserColor, timeAgo, formatRichTextReact, extractTwitterUrlFromText } from '../../utils';
-import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink, Link2 } from 'lucide-react';
+import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink, Link2, Shield, Phone, FileText, EyeOff } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { formatTelUri } from '../../data/emergencyContacts';
 
 interface PostCardProps {
   post: Post;
@@ -25,17 +26,32 @@ export const PostCard: React.FC<PostCardProps> = ({
   const totalUpvotes = post.reactions?.['👍'] || 0;
   const myUpvote = user && post.userReactions?.['👍'] === '👍';
   const isOwner = user?.uid === post.authorUid;
+  const isCrime = post.reportType === 'crime';
+  const isAnonymous = isCrime && post.anonymous;
 
-  const authorInitials = getInitials(post.author);
-  const [ac1] = getUserColor(post.author);
+  const displayAuthor = isAnonymous ? 'Anonymous Citizen' : post.author;
+  const authorInitials = isAnonymous ? '?' : getInitials(post.author);
+  const [ac1] = getUserColor(isAnonymous ? 'Anonymous' : post.author);
 
   const categoryLabels: Record<string, string> = {
+    // Civic categories
     pothole: '🕳️ Pothole',
     water_leak: '💧 Water Leak',
     electricity: '⚡ Electricity Outage',
     sewage: '⚠️ Sewage Overflow',
     traffic_light: '🚦 Broken Robot',
     other: '🏗️ Other Issue',
+    // Crime categories
+    theft: '🔓 Theft',
+    robbery: '🔪 Robbery',
+    assault: '🚨 Assault',
+    burglary: '🏠 Burglary',
+    vandalism: '💥 Vandalism',
+    hijacking: '🚗 Hijacking',
+    drug_activity: '💊 Drug Activity',
+    fraud: '📋 Fraud',
+    domestic_violence: '🤝 Domestic Violence',
+    crime_other: '🔍 Other Crime',
   };
 
   const statusColors: Record<string, string> = {
@@ -48,6 +64,13 @@ export const PostCard: React.FC<PostCardProps> = ({
     active: 'Open',
     in_progress: 'In Progress',
     resolved: 'Resolved',
+  };
+
+  const urgencyConfig: Record<string, { label: string; className: string }> = {
+    low: { label: '🟢 Low', className: 'urgency-low' },
+    medium: { label: '🟡 Medium', className: 'urgency-medium' },
+    high: { label: '🟠 High', className: 'urgency-high' },
+    emergency: { label: '🔴 Emergency', className: 'urgency-emergency' },
   };
 
   const twitterUrl = post.socialUrl || extractTwitterUrlFromText(post.content);
@@ -76,15 +99,21 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   return (
-    <article className="post-card" id={`post-${post.id}`}>
+    <article className={`post-card ${isCrime ? 'post-card--crime' : ''}`} id={`post-${post.id}`}>
       {/* Header Info */}
       <div className="post-header">
         <div className="post-author-info">
-          <div className="user-avatar" style={{ background: ac1 }}>
-            {authorInitials}
+          <div 
+            className={`user-avatar ${isAnonymous ? 'avatar-anonymous' : ''}`} 
+            style={{ background: isAnonymous ? '#374151' : ac1 }}
+          >
+            {isAnonymous ? <EyeOff size={14} /> : authorInitials}
           </div>
           <div className="post-meta">
-            <div className="post-author-name">{post.author}</div>
+            <div className={`post-author-name ${isAnonymous ? 'author-anonymous' : ''}`}>
+              {displayAuthor}
+              {isAnonymous && <EyeOff size={11} style={{ marginLeft: '4px', opacity: 0.6 }} />}
+            </div>
             <Link to={`/post/${post.id}`} className="post-timestamp-link">
               <Clock size={12} />
               <span>{timeAgo(post.timestamp)}</span>
@@ -93,6 +122,14 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
 
         <div className="post-header-actions">
+          {/* Report Type Badge */}
+          {isCrime && (
+            <span className="report-type-badge report-type-crime">
+              <Shield size={11} />
+              Crime
+            </span>
+          )}
+
           <span className={`status-badge ${statusColors[post.status || 'active']}`}>
             {post.status === 'resolved' ? (
               <CheckCircle2 size={12} />
@@ -131,7 +168,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       {/* Civic Meta Info Chips */}
       <div className="civic-meta-row">
         {post.category && (
-          <span className="category-chip">
+          <span className={`category-chip ${isCrime ? 'category-chip--crime' : ''}`}>
             {categoryLabels[post.category] || post.category}
           </span>
         )}
@@ -140,12 +177,56 @@ export const PostCard: React.FC<PostCardProps> = ({
             <MapPin size={12} /> {post.location}
           </span>
         )}
+        {/* Crime Urgency Badge */}
+        {isCrime && post.crimeUrgency && urgencyConfig[post.crimeUrgency] && (
+          <span className={`urgency-badge ${urgencyConfig[post.crimeUrgency].className}`}>
+            {urgencyConfig[post.crimeUrgency].label}
+          </span>
+        )}
       </div>
+
+      {/* Crime-specific Meta Row */}
+      {isCrime && (
+        <div className="crime-meta-row">
+          {post.incidentTime && (
+            <span className="crime-meta-chip">
+              <Clock size={11} />
+              {formatIncidentTime(post.incidentTime)}
+            </span>
+          )}
+          {post.policeContacted && (
+            <span className="crime-meta-chip police-contacted">
+              <Phone size={11} />
+              Police Contacted
+            </span>
+          )}
+          {post.caseNumber && (
+            <span className="crime-meta-chip case-number">
+              <FileText size={11} />
+              Case: {post.caseNumber}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Main Issue Content */}
       <div className="post-content-body">
         {formatRichTextReact(post.content)}
       </div>
+
+      {/* Emergency CTA for high-urgency crime reports */}
+      {isCrime && (post.crimeUrgency === 'high' || post.crimeUrgency === 'emergency') && post.status !== 'resolved' && (
+        <div className="crime-emergency-cta">
+          <a href={formatTelUri('10111')} className="emergency-call-btn">
+            <Phone size={14} />
+            <span>Call SAPS: 10111</span>
+          </a>
+          <a href={formatTelUri('112')} className="emergency-call-btn secondary">
+            <Phone size={14} />
+            <span>Emergency: 112</span>
+          </a>
+        </div>
+      )}
 
       {/* Embedded Social Media Preview */}
       {twitterUrl && (
@@ -224,3 +305,20 @@ export const PostCard: React.FC<PostCardProps> = ({
     </article>
   );
 };
+
+/** Format an incident time string for display */
+function formatIncidentTime(timeStr: string): string {
+  try {
+    const date = new Date(timeStr);
+    if (isNaN(date.getTime())) return timeStr;
+    return date.toLocaleString('en-ZA', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return timeStr;
+  }
+}

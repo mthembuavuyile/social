@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, TrendingUp, Map, Filter } from 'lucide-react';
 import { Post } from '../../types';
 import { useNavigate } from 'react-router-dom';
+import { EmergencyWidget } from './EmergencyWidget';
 
 interface RightSidebarProps {
   posts: Post[];
@@ -25,6 +26,8 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const resolvedPosts = posts.filter(p => p.status === 'resolved').length;
   const activePosts = posts.filter(p => p.status === 'active' || !p.status).length;
   const inProgressPosts = posts.filter(p => p.status === 'in_progress').length;
+  const crimeReports = posts.filter(p => p.reportType === 'crime').length;
+  const civicReports = totalPosts - crimeReports;
   
   const resolutionRate = totalPosts > 0 ? Math.round((resolvedPosts / totalPosts) * 100) : 0;
 
@@ -36,6 +39,16 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
     { id: 'sewage', label: 'Sewage', icon: '⚠️' },
     { id: 'traffic_light', label: 'Traffic Light', icon: '🚦' },
     { id: 'other', label: 'Other Infrastructure', icon: '🏗️' },
+    { id: 'theft', label: 'Theft', icon: '🔓' },
+    { id: 'robbery', label: 'Robbery', icon: '🔪' },
+    { id: 'assault', label: 'Assault', icon: '🚨' },
+    { id: 'burglary', label: 'Burglary', icon: '🏠' },
+    { id: 'vandalism', label: 'Vandalism', icon: '💥' },
+    { id: 'hijacking', label: 'Hijacking', icon: '🚗' },
+    { id: 'drug_activity', label: 'Drug Activity', icon: '💊' },
+    { id: 'fraud', label: 'Fraud', icon: '📋' },
+    { id: 'domestic_violence', label: 'Domestic Violence', icon: '🤝' },
+    { id: 'crime_other', label: 'Other Crime', icon: '🔍' },
   ];
 
   return (
@@ -107,6 +120,19 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             <span>Resolved: <strong>{resolvedPosts}</strong></span>
           </div>
         </div>
+
+        {crimeReports > 0 && (
+          <div className="stats-breakdown" style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
+            <div className="breakdown-item">
+              <span className="dot" style={{ background: '#dc2626' }}></span>
+              <span>Crime Reports: <strong>{crimeReports}</strong></span>
+            </div>
+            <div className="breakdown-item">
+              <span className="dot" style={{ background: 'var(--accent-primary)' }}></span>
+              <span>Civic Issues: <strong>{civicReports}</strong></span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Interactive Map Quick Card */}
@@ -140,6 +166,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Emergency Numbers Widget */}
+      <EmergencyWidget />
     </aside>
   );
 };

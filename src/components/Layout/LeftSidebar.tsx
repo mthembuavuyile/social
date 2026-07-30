@@ -8,7 +8,9 @@ import {
   User, 
   ShieldCheck, 
   PlusCircle,
-  Activity
+  Activity,
+  Shield,
+  Phone
 } from 'lucide-react';
 import { getInitials, getUserColor } from '../../utils';
 
@@ -85,6 +87,22 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <Activity size={20} color="#ff9a00" />
           <span>High Urgency</span>
         </button>
+
+        <button 
+          className={`sidebar-link btn-link ${activeFilter === 'crime' ? 'active' : ''}`}
+          onClick={() => onSelectFilter?.('crime')}
+        >
+          <Shield size={20} color="#dc2626" />
+          <span>Crime Reports</span>
+        </button>
+
+        <NavLink 
+          to="/emergency" 
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <Phone size={20} color="#dc2626" />
+          <span>Emergency Lines</span>
+        </NavLink>
 
         <NavLink 
           to="/profile" 

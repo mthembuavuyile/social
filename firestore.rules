@@ -26,7 +26,14 @@ service cloud.firestore {
         && isValidString(request.resource.data.author, 100)
         && (!('location' in request.resource.data) || isValidString(request.resource.data.location, 200))
         && (!('city' in request.resource.data) || isValidString(request.resource.data.city, 100))
-        && (!('province' in request.resource.data) || isValidString(request.resource.data.province, 100));
+        && (!('province' in request.resource.data) || isValidString(request.resource.data.province, 100))
+        // Crime report fields validation
+        && (!('reportType' in request.resource.data) || request.resource.data.reportType in ['civic', 'crime'])
+        && (!('crimeUrgency' in request.resource.data) || request.resource.data.crimeUrgency in ['low', 'medium', 'high', 'emergency'])
+        && (!('incidentTime' in request.resource.data) || isValidString(request.resource.data.incidentTime, 100))
+        && (!('caseNumber' in request.resource.data) || isValidString(request.resource.data.caseNumber, 100))
+        && (!('policeContacted' in request.resource.data) || request.resource.data.policeContacted is bool)
+        && (!('anonymous' in request.resource.data) || request.resource.data.anonymous is bool);
 
       allow delete: if isAuthor(resource.data);
       
