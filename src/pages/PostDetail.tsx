@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
 import { Post } from '../types';
 import { PostCard } from '../components/Feed/PostCard';
+import { fetchComments, addComment } from '../hooks/usePosts';
 import { ArrowLeft, Share2, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -172,6 +173,12 @@ export const PostDetail: React.FC<PostDetailProps> = ({ user }) => {
             navigate('/');
           }}
           onUpdateStatus={(_, status) => handleUpdateStatus(status)}
+          fetchComments={fetchComments}
+          onAddComment={(postId, text) => {
+            if (user) {
+              addComment(postId, text, { uid: user.uid, displayName: user.displayName });
+            }
+          }}
         />
       </div>
 

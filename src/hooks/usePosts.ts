@@ -1,7 +1,42 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc, getDoc, getDocs, increment } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
-import { Post } from '../types';
+import { Post, Comment } from '../types';
+
+export const fetchComments = async (postId: string): Promise<Comment[]> => {
+  const commentsRef = collection(dbFirestore, 'posts', postId, 'comments');
+  const q = query(commentsRef, orderBy('timestamp', 'asc'));
+  const snapshot = await getDocs(q);
+  const commentsArray: Comment[] = [];
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    commentsArray.push({
+      id: docSnap.id,
+      postId,
+      content: data.content,
+      author: data.author,
+      authorUid: data.authorUid,
+      timestamp: data.timestamp ? (data.timestamp.toMillis ? data.timestamp.toMillis() : data.timestamp) : Date.now(),
+    });
+  });
+  return commentsArray;
+};
+
+export const addComment = async (postId: string, text: string, user: { uid: string, displayName: string }) => {
+  const commentsRef = collection(dbFirestore, 'posts', postId, 'comments');
+  await addDoc(commentsRef, {
+    postId,
+    content: text,
+    author: user.displayName,
+    authorUid: user.uid,
+    timestamp: serverTimestamp(),
+  });
+  
+  const postRef = doc(dbFirestore, 'posts', postId);
+  await updateDoc(postRef, {
+    commentsCount: increment(1)
+  });
+};
 
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -24,6 +59,7 @@ export function usePosts() {
           timestamp: data.timestamp ? (data.timestamp.toMillis ? data.timestamp.toMillis() : data.timestamp) : Date.now(),
           reactions: data.reactions || {},
           userReactions: data.userReactions || {},
+          commentsCount: data.commentsCount || 0,
           
           // Shared fields
           reportType: data.reportType || 'civic',
@@ -58,6 +94,7 @@ export function usePosts() {
     );
     await addDoc(postsRef, {
       ...cleanedData,
+      commentsCount: 0,
       timestamp: serverTimestamp(),
     });
   };
@@ -68,8 +105,6 @@ export function usePosts() {
   };
   
   const deletePost = async (postId: string, currentUserUid: string) => {
-    // Defense-in-depth: verify ownership client-side before attempting delete.
-    // Firestore rules also enforce this, but this prevents unnecessary failed requests.
     const postRef = doc(dbFirestore, 'posts', postId);
     const snap = await getDoc(postRef);
     if (!snap.exists()) {

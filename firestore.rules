@@ -17,41 +17,64 @@ service cloud.firestore {
       return field is string && field.size() <= maxLen;
     }
 
+    // Helper to validate common post fields for both create and update
+    function isValidPostData(data) {
+      return isValidString(data.content, 2000)
+        && isValidString(data.author, 100)
+        && (!('location' in data) || isValidString(data.location, 200))
+        && (!('city' in data) || isValidString(data.city, 100))
+        && (!('province' in data) || isValidString(data.province, 100))
+        && (!('reportType' in data) || data.reportType in ['civic', 'crime'])
+        && (!('crimeUrgency' in data) || data.crimeUrgency in ['low', 'medium', 'high', 'emergency'])
+        && (!('status' in data) || data.status in ['active', 'in_progress', 'resolved'])
+        && (!('incidentTime' in data) || isValidString(data.incidentTime, 100))
+        && (!('caseNumber' in data) || isValidString(data.caseNumber, 100))
+        && (!('policeContacted' in data) || data.policeContacted is bool)
+        && (!('anonymous' in data) || data.anonymous is bool)
+        && (!('socialUrl' in data) || isValidString(data.socialUrl, 500))
+        && (!('imageUrl' in data) || isValidString(data.imageUrl, 1000));
+    }
+
     match /posts/{postId} {
       allow read: if true;
 
       allow create: if isAuthenticated()
         && request.resource.data.authorUid == request.auth.uid
-        && isValidString(request.resource.data.content, 2000)
-        && isValidString(request.resource.data.author, 100)
-        && (!('location' in request.resource.data) || isValidString(request.resource.data.location, 200))
-        && (!('city' in request.resource.data) || isValidString(request.resource.data.city, 100))
-        && (!('province' in request.resource.data) || isValidString(request.resource.data.province, 100))
-        // Crime report fields validation
-        && (!('reportType' in request.resource.data) || request.resource.data.reportType in ['civic', 'crime'])
-        && (!('crimeUrgency' in request.resource.data) || request.resource.data.crimeUrgency in ['low', 'medium', 'high', 'emergency'])
-        && (!('incidentTime' in request.resource.data) || isValidString(request.resource.data.incidentTime, 100))
-        && (!('caseNumber' in request.resource.data) || isValidString(request.resource.data.caseNumber, 100))
-        && (!('policeContacted' in request.resource.data) || request.resource.data.policeContacted is bool)
-        && (!('anonymous' in request.resource.data) || request.resource.data.anonymous is bool);
+        && isValidPostData(request.resource.data);
 
       allow delete: if isAuthor(resource.data);
       
       allow update: if isAuthenticated() && (
-        // Authors can update their own posts freely
-        isAuthor(resource.data) || (
-          // Non-authors can ONLY update reactions and userReactions.
+        // Authors can update their own posts completely (status, content, etc)
+        (isAuthor(resource.data) && isValidPostData(request.resource.data)) || (
+          // Non-authors can ONLY update reactions, userReactions, and commentsCount for endorsements and activity tracking.
           // All other fields must remain unchanged.
-          request.resource.data.content == resource.data.content &&
-          request.resource.data.authorUid == resource.data.authorUid &&
-          request.resource.data.author == resource.data.author &&
-          request.resource.data.timestamp == resource.data.timestamp &&
-          request.resource.data.status == resource.data.status &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['reactions', 'userReactions'])
+            .hasOnly(['reactions', 'userReactions', 'commentsCount'])
         )
       );
 
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if true;
+        
+        allow create: if isAuthenticated()
+          && request.resource.data.authorUid == request.auth.uid
+          && isValidString(request.resource.data.content, 1000)
+          && isValidString(request.resource.data.author, 100);
+          
+        // Allow comment authors to update or delete their comments
+        // Also allow post authors to delete comments on their posts (moderation)
+        allow delete: if isAuthor(resource.data) || isAuthor(get(/databases/$(database)/documents/posts/$(postId)).data);
+        allow update: if isAuthor(resource.data)
+          && isValidString(request.resource.data.content, 1000)
+          && isValidString(request.resource.data.author, 100);
+      }
+    }
+
+    // Default rule to protect other collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

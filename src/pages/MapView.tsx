@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CivicMap } from '../components/Map/CivicMap';
-import { usePosts } from '../hooks/usePosts';
+import { usePosts, fetchComments, addComment } from '../hooks/usePosts';
 import { PostCard } from '../components/Feed/PostCard';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
@@ -95,6 +95,12 @@ export const MapView: React.FC<MapViewProps> = ({ user }) => {
               if (user) deletePost(postId, user.uid);
             }}
             onUpdateStatus={updatePostStatus}
+            fetchComments={fetchComments}
+            onAddComment={(postId, text) => {
+              if (user) {
+                addComment(postId, text, { uid: user.uid, displayName: user.displayName });
+              }
+            }}
           />
         </div>
       )}

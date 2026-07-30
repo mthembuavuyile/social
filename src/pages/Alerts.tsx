@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
 import toast from 'react-hot-toast';
 import { Post } from '../types';
+import { fetchComments, addComment } from '../hooks/usePosts';
 import { ShieldAlert, Inbox } from 'lucide-react';
 
 interface AlertsProps {
@@ -105,6 +106,12 @@ export const Alerts: React.FC<AlertsProps> = ({
                 if (user) deletePost(postId, user.uid);
               }}
               onUpdateStatus={updatePostStatus}
+              fetchComments={fetchComments}
+              onAddComment={(postId, text) => {
+                if (user) {
+                  addComment(postId, text, { uid: user.uid, displayName: user.displayName });
+                }
+              }}
             />
           ))
         )}

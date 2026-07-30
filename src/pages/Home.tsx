@@ -2,6 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { PostComposer } from '../components/Feed/PostComposer';
 import { PostCard } from '../components/Feed/PostCard';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { fetchComments, addComment } from '../hooks/usePosts';
 import { dbFirestore } from '../firebase';
 import toast from 'react-hot-toast';
 import { Post } from '../types';
@@ -240,6 +241,12 @@ export const Home: React.FC<HomeProps> = ({
                 if (user) deletePost(postId, user.uid);
               }}
               onUpdateStatus={updatePostStatus}
+              fetchComments={fetchComments}
+              onAddComment={(postId, text) => {
+                if (user) {
+                  addComment(postId, text, { uid: user.uid, displayName: user.displayName });
+                }
+              }}
             />
           ))
         )}
