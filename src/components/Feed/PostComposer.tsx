@@ -150,9 +150,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
       setContent(val);
       // Auto detect X/Twitter URL in pasted content
       const twitterUrl = extractTwitterUrlFromText(val);
-      if (twitterUrl && !socialUrl) {
-        setSocialUrl(twitterUrl);
-      }
+      setSocialUrl(twitterUrl || '');
     }
   };
 
@@ -719,41 +717,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
             </div>
           )}
 
-          <div className="form-group">
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Social Media Link (X / Twitter)</label>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
-                  <XIcon size={14} color="#1d9bf0" />
-                </div>
-                <input
-                  type="url"
-                  className="standard-input"
-                  placeholder="https://x.com/username/status/123456789"
-                  value={socialUrl}
-                  onChange={(e) => {
-                    if (e.target.value.length <= MAX_SOCIAL_URL_LENGTH) {
-                      setSocialUrl(e.target.value);
-                    }
-                  }}
-                  maxLength={MAX_SOCIAL_URL_LENGTH}
-                  style={{ width: '100%', padding: '8px 8px 8px 32px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
-                />
-              </div>
-              {socialUrl.trim() && (
-                <button type="button" onClick={() => setSocialUrl('')} style={{ padding: '8px', borderRadius: '4px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
-              Attach an X/Twitter post link for verification or context
-            </p>
-          </div>
+
 
           <div className="form-group">
             <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Photo Evidence</label>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="file"
                 accept="image/*"
@@ -763,17 +731,30 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
                 disabled={isUploadingImage || !!imageUrl}
               />
               {!imageUrl && (
-                <label 
-                  htmlFor="image-upload" 
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)', cursor: isUploadingImage ? 'not-allowed' : 'pointer', opacity: isUploadingImage ? 0.7 : 1 }}
-                >
-                  {isUploadingImage ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
-                  {isUploadingImage ? 'Uploading...' : 'Upload Image'}
-                </label>
+                <>
+                  <label 
+                    htmlFor="image-upload" 
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)', cursor: isUploadingImage ? 'not-allowed' : 'pointer', opacity: isUploadingImage ? 0.7 : 1, whiteSpace: 'nowrap' }}
+                  >
+                    {isUploadingImage ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
+                    {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+                  </label>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>or</span>
+                  <input
+                    type="url"
+                    className="standard-input"
+                    placeholder="Paste image URL..."
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    style={{ flex: 1, minWidth: '200px', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+                  />
+                </>
               )}
               {imageUrl && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--accent-success)' }}>Image uploaded!</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--accent-success)' }}>
+                    {imageUrl.startsWith('https://firebasestorage') || imageUrl.startsWith('data:') ? 'Image uploaded!' : 'Image linked!'}
+                  </span>
                   <button type="button" onClick={handleRemoveImage} style={{ padding: '6px', borderRadius: '4px', background: 'var(--accent-danger)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                     <X size={14} />
                   </button>
@@ -782,11 +763,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
             </div>
             {imagePreviewError && imageUrl.trim() && (
               <p style={{ fontSize: '0.75rem', color: 'var(--accent-danger)', marginTop: '4px', marginBottom: 0 }}>
-                ⚠ Could not load image preview.
+                ⚠ Could not load image preview. Please check the URL.
               </p>
             )}
             <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
-              Max size: 5MB (JPEG, PNG, GIF, WebP)
+              Max size: 5MB (JPEG, PNG, GIF, WebP) or provide a direct image link.
             </p>
           </div>
 
