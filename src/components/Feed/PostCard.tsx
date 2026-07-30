@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Post, Comment } from '../../types';
 import { getInitials, getUserColor, timeAgo, formatRichTextReact, extractTwitterUrlFromText } from '../../utils';
-import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink, Link2, Shield, Phone, FileText, EyeOff, MessageSquare } from 'lucide-react';
+import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, Check, ExternalLink, Link2, Shield, Phone, FileText, EyeOff, MessageSquare, Flag, X, ShieldAlert } from 'lucide-react';
 import { TwitterEmbed } from './TwitterEmbed';
 import { PollView } from './PollView';
 import { CommentSection } from './CommentSection';
@@ -34,6 +34,12 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('false_report');
+  const [isFlaggedByMe, setIsFlaggedByMe] = useState(() => {
+    return localStorage.getItem(`civicly_flagged_${post.id}`) === 'true';
+  });
+  const [showFlaggedContent, setShowFlaggedContent] = useState(false);
   
   const totalUpvotes = post.reactions?.['👍'] || 0;
   const myUpvote = user && post.userReactions?.['👍'] === '👍';
@@ -143,6 +149,34 @@ export const PostCard: React.FC<PostCardProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleReportSubmit = () => {
+    localStorage.setItem(`civicly_flagged_${post.id}`, 'true');
+    setIsFlaggedByMe(true);
+    setIsReportModalOpen(false);
+    toast.success('Report submitted. Content has been hidden from your feed for community review.');
+  };
+
+  if (isFlaggedByMe && !showFlaggedContent) {
+    return (
+      <div className="post-card" style={{ padding: '16px 20px', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <ShieldAlert size={20} color="#ef4444" />
+            <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+              You flagged this report for community review. It is hidden from your feed.
+            </span>
+          </div>
+          <button 
+            onClick={() => setShowFlaggedContent(true)}
+            style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Show Report
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <article className={`post-card ${isCrime ? 'post-card--crime' : ''}`} id={`post-${post.id}`}>
       {/* Header Info */}
@@ -193,6 +227,17 @@ export const PostCard: React.FC<PostCardProps> = ({
           >
             <Link2 size={15} />
           </Link>
+
+          {!isOwner && (
+            <button 
+              onClick={() => setIsReportModalOpen(true)}
+              className="btn-icon-secondary"
+              title="Flag / Report Content"
+              style={{ color: isFlaggedByMe ? '#ef4444' : undefined }}
+            >
+              <Flag size={15} />
+            </button>
+          )}
 
           {isOwner && (
             <button 
@@ -383,6 +428,119 @@ export const PostCard: React.FC<PostCardProps> = ({
             isAnonymousPost={isAnonymous}
           />
         )
+      )}
+
+      {/* Content Moderation Flag Modal */}
+      {isReportModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }} onClick={() => setIsReportModalOpen(false)}>
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '16px',
+            maxWidth: '480px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Flag size={20} color="#ef4444" />
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Report Violation
+                </h3>
+              </div>
+              <button 
+                onClick={() => setIsReportModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.5 }}>
+              Help keep Civicly safe. Why are you reporting this post?
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {[
+                { id: 'false_report', label: '🚨 False or Fraudulent Civic Report' },
+                { id: 'doxing', label: '👤 Doxing / Personal Private Info' },
+                { id: 'hate_speech', label: '⚠️ Hate Speech, Harassment, or Bullying' },
+                { id: 'spam', label: '📢 Commercial Spam or Unrelated Ads' },
+                { id: 'inappropriate', label: '📷 Inappropriate / Offensive Media' }
+              ].map((opt) => (
+                <label 
+                  key={opt.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: reportReason === opt.id ? 'rgba(59, 130, 246, 0.1)' : 'var(--surface-color)',
+                    border: reportReason === opt.id ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <input 
+                    type="radio" 
+                    name="reportReason" 
+                    value={opt.id} 
+                    checked={reportReason === opt.id}
+                    onChange={() => setReportReason(opt.id)}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setIsReportModalOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: 'transparent',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleReportSubmit}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </article>
   );

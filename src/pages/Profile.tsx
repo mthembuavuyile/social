@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, ChevronRight, ShieldCheck, Check } from 'lucide-react';
+import { FileText, ChevronRight, ShieldCheck, Check, Trash2, Key, RefreshCw, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getInitials, getUserColor } from '../utils';
 
@@ -45,8 +45,32 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
     }
   };
 
+  const handleClearLocalSession = () => {
+    if (window.confirm('Are you sure you want to clear your cached local identity and reset local data?')) {
+      localStorage.removeItem('civicly_username');
+      toast.success('Local session data cleared. Refreshing page...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+  };
+
+  const handleResetFlaggedPosts = () => {
+    let cleared = 0;
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('civicly_flagged_')) {
+        localStorage.removeItem(key);
+        cleared++;
+      }
+    });
+    toast.success(`Reset ${cleared} flagged post filters.`);
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  };
+
   return (
-    <div className="profile-card" style={{ maxWidth: '640px', margin: '0 auto' }}>
+    <div className="profile-card" style={{ maxWidth: '640px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* Profile Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '20px', borderBottom: '1px solid var(--border-color)', marginBottom: '24px' }}>
         <div 
@@ -78,6 +102,34 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
         </div>
       </div>
 
+      {/* Anonymous ID Security Badge */}
+      <div style={{ 
+        background: 'var(--surface-color)', 
+        border: '1px solid var(--border-color)', 
+        borderRadius: '10px', 
+        padding: '14px 16px', 
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Key size={18} color="var(--accent-primary)" />
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+              Firebase Anonymous Session UID
+            </div>
+            <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '2px' }}>
+              {user?.uid || 'Not Connected'}
+            </div>
+          </div>
+        </div>
+        <span style={{ fontSize: '0.75rem', color: 'var(--accent-success)', background: 'rgba(0, 186, 124, 0.1)', padding: '4px 8px', borderRadius: '4px', fontWeight: 600 }}>
+          Encrypted
+        </span>
+      </div>
+
       {/* Account Settings Form */}
       <div className="form-group" style={{ marginBottom: '20px' }}>
         <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>
@@ -104,16 +156,69 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
         onClick={handleSaveProfile}
         disabled={isSaving}
         className="btn-primary"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600 }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600, marginBottom: '28px' }}
       >
         <Check size={16} />
         {isSaving ? 'Saving...' : 'Save Profile'}
       </button>
 
+      {/* Privacy & Data Management */}
+      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '14px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Lock size={15} color="var(--accent-primary)" /> Privacy & Data Rights (POPIA / GDPR)
+        </h3>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <button
+            onClick={handleClearLocalSession}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: 'var(--surface-color)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-main)',
+              fontSize: '0.88rem',
+              cursor: 'pointer'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Trash2 size={16} color="#ef4444" />
+              <span>Clear Cached Local Identity</span>
+            </div>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Reset localStorage</span>
+          </button>
+
+          <button
+            onClick={handleResetFlaggedPosts}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: 'var(--surface-color)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-main)',
+              fontSize: '0.88rem',
+              cursor: 'pointer'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <RefreshCw size={16} color="var(--accent-primary)" />
+              <span>Reset Hidden Flagged Posts</span>
+            </div>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Restore feed filters</span>
+          </button>
+        </div>
+      </div>
+
       {/* Legal & Policies */}
-      <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '28px', paddingTop: '20px' }}>
-        <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 700 }}>
-          Legal & Policies
+      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+        <h3 style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 700 }}>
+          Legal, Compliance & Safety
         </h3>
         <Link 
           to="/terms" 
@@ -133,7 +238,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FileText size={18} color="var(--accent-primary)" />
-            <span style={{ fontWeight: 500 }}>Privacy Policy & Terms of Service</span>
+            <span style={{ fontWeight: 500 }}>Legal, Privacy & Compliance Hub</span>
           </div>
           <ChevronRight size={16} color="var(--text-muted)" />
         </Link>
@@ -141,3 +246,4 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
     </div>
   );
 };
+

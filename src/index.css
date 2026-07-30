@@ -140,7 +140,7 @@ html, body {
 
 .layout-grid-container {
   display: grid;
-  grid-template-columns: 260px 1fr 340px;
+  grid-template-columns: 240px minmax(0, 1fr) 330px;
   gap: 24px;
   max-width: 1280px;
   width: 100%;
@@ -500,6 +500,9 @@ html, body {
 .main-content-stage {
   min-height: 100vh;
   padding: 20px 0;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .feed-header-sticky {
@@ -943,9 +946,18 @@ html, body {
 }
 
 /* Responsiveness Media Queries */
+@media (max-width: 1200px) {
+  .layout-grid-container {
+    grid-template-columns: 210px minmax(0, 1fr) 290px;
+    gap: 16px;
+    padding: 0 12px;
+  }
+}
+
 @media (max-width: 1024px) {
   .layout-grid-container {
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 16px;
   }
   .right-sidebar {
     display: none;
