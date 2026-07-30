@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Comment } from '../../types';
 import { timeAgo, getInitials, getUserColor } from '../../utils';
-import { Send } from 'lucide-react';
+import { Send, MessageSquare } from 'lucide-react';
 
 interface CommentSectionProps {
   postId: string;
@@ -11,7 +11,7 @@ interface CommentSectionProps {
   isAnonymousPost?: boolean;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments, user, onAddComment, isAnonymousPost }) => {
+export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments, user, onAddComment }) => {
   const [newComment, setNewComment] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -22,52 +22,98 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments
   };
 
   return (
-    <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+    <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+      {/* Comments Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '14px' }}>
+        <MessageSquare size={14} />
+        <span>Comments ({comments.length})</span>
+      </div>
+
       {/* Comments List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
         {comments.map((comment) => {
           const [ac] = getUserColor(comment.author);
           
           return (
-            <div key={comment.id} style={{ display: 'flex', gap: '12px' }}>
+            <div key={comment.id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
               <div 
-                style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: ac, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 600, flexShrink: 0 }}
+                className="user-avatar"
+                style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  minWidth: '32px', 
+                  minHeight: '32px', 
+                  backgroundColor: ac, 
+                  fontSize: '0.75rem',
+                  boxShadow: 'none'
+                }}
               >
                 {getInitials(comment.author)}
               </div>
-              <div style={{ flex: 1, backgroundColor: 'var(--surface-hover)', padding: '12px', borderRadius: '0 12px 12px 12px' }}>
+              <div style={{ 
+                flex: 1, 
+                backgroundColor: 'var(--surface-color-hover)', 
+                border: '1px solid var(--border-color)', 
+                padding: '10px 14px', 
+                borderRadius: '0 14px 14px 14px' 
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{comment.author}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{timeAgo(comment.timestamp)}</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>{comment.author}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{timeAgo(comment.timestamp)}</span>
                 </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                <div style={{ fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.4, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                   {comment.content}
                 </div>
               </div>
             </div>
           );
         })}
+
         {comments.length === 0 && (
-          <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', padding: '16px 0' }}>
-            No comments yet. Be the first to share your thoughts!
+          <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-muted)', padding: '12px 0', background: 'var(--surface-color-hover)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }}>
+            No comments yet. Share your thoughts or updates below.
           </div>
         )}
       </div>
 
-      {/* Comment Input */}
+      {/* Comment Input Box */}
       {user ? (
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <div 
-            style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: getUserColor(user.displayName)[0], display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.8rem', fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}
+            className="user-avatar"
+            style={{ 
+              width: '32px', 
+              height: '32px', 
+              minWidth: '32px', 
+              minHeight: '32px', 
+              backgroundColor: getUserColor(user.displayName)[0], 
+              fontSize: '0.75rem',
+              boxShadow: 'none'
+            }}
           >
             {getInitials(user.displayName)}
           </div>
-          <div style={{ flex: 1, position: 'relative' }}>
+          <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
             <textarea 
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Add a comment..."
-              style={{ width: '100%', minHeight: '40px', maxHeight: '120px', padding: '10px 40px 10px 12px', borderRadius: '20px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'none', overflowY: 'hidden', outline: 'none', fontFamily: 'inherit' }}
+              rows={1}
+              style={{ 
+                width: '100%', 
+                minHeight: '38px', 
+                maxHeight: '120px', 
+                padding: '9px 42px 9px 14px', 
+                borderRadius: '20px', 
+                border: '1px solid var(--border-color)', 
+                backgroundColor: 'var(--bg-color)', 
+                color: 'var(--text-main)', 
+                fontSize: '0.88rem', 
+                resize: 'none', 
+                outline: 'none', 
+                fontFamily: 'inherit',
+                lineHeight: '1.4'
+              }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
@@ -83,15 +129,30 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments
             <button 
               type="submit" 
               disabled={!newComment.trim()}
-              style={{ position: 'absolute', right: '8px', bottom: '8px', background: 'transparent', border: 'none', cursor: newComment.trim() ? 'pointer' : 'not-allowed', color: newComment.trim() ? 'var(--accent-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+              style={{ 
+                position: 'absolute', 
+                right: '6px', 
+                background: newComment.trim() ? 'var(--accent-primary)' : 'transparent', 
+                border: 'none', 
+                borderRadius: '50%',
+                width: '28px',
+                height: '28px',
+                cursor: newComment.trim() ? 'pointer' : 'default', 
+                color: newComment.trim() ? '#ffffff' : 'var(--text-muted)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                transition: 'background 0.15s ease, color 0.15s ease' 
+              }}
+              title="Send Comment"
             >
-              <Send size={18} />
+              <Send size={14} />
             </button>
           </div>
         </form>
       ) : (
-        <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Please log in to leave a comment.
+        <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+          Log in to leave a comment.
         </div>
       )}
     </div>
