@@ -144,8 +144,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
             }
           }}
           maxLength={50}
-          className="form-input"
+          className="standard-input"
           placeholder="Enter display name..."
+          style={{ width: '100%', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
         />
         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>
           This name will be shown publicly on your reports unless submitted anonymously.
@@ -155,8 +156,21 @@ export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
       <button 
         onClick={handleSaveProfile}
         disabled={isSaving}
-        className="btn-primary"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600, marginBottom: '28px' }}
+        style={{ 
+          display: 'inline-flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          padding: '12px 24px', 
+          fontWeight: 600, 
+          marginBottom: '28px',
+          borderRadius: 'var(--radius-pill)',
+          background: 'var(--accent-primary)',
+          color: '#ffffff',
+          border: 'none',
+          cursor: isSaving ? 'not-allowed' : 'pointer',
+          opacity: isSaving ? 0.7 : 1,
+          transition: 'all 0.2s ease'
+        }}
       >
         <Check size={16} />
         {isSaving ? 'Saving...' : 'Save Profile'}

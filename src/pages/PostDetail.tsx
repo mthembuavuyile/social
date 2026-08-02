@@ -142,25 +142,29 @@ export const PostDetail: React.FC<PostDetailProps> = ({ user }) => {
   return (
     <div className="post-detail-page">
       {/* Header Sticky Back Bar */}
-      <div className="feed-header-sticky" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button 
-          onClick={() => navigate('/')} 
-          style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: 600 }}
-        >
-          <ArrowLeft size={20} />
-          <span>Back</span>
-        </button>
-        <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-main)', flex: 1 }}>
-          Civic Issue #{post.id.substring(0, 8)}
+      <div className="post-detail-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-color)', marginBottom: '4px' }}>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+          <button 
+            onClick={() => navigate('/')} 
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', fontWeight: 600, padding: '4px 0' }}
+          >
+            <ArrowLeft size={20} />
+            <span>Back</span>
+          </button>
+        </div>
+        <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)', flex: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center' }}>
+          Report Details
         </h2>
-        <button 
-          onClick={handleCopyDirectLink}
-          className="action-btn"
-          style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(29, 155, 240, 0.3)' }}
-        >
-          {copied ? <Check size={16} /> : <Copy size={16} />}
-          <span>{copied ? 'Link Copied' : 'Copy Direct Link'}</span>
-        </button>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <button 
+            onClick={handleCopyDirectLink}
+            className="action-btn"
+            style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(29, 155, 240, 0.3)', padding: '6px 12px' }}
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            <span className="action-label">{copied ? 'Copied' : 'Copy Link'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Single Post Card Container */}

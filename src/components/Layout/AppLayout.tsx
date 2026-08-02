@@ -3,7 +3,7 @@ import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
 import { Post } from '../../types';
 import { NavLink } from 'react-router-dom';
-import { Home, MapPin, User, AlertTriangle, Plus, Bell } from 'lucide-react';
+import { Home, MapPin, User, AlertTriangle, Plus, Bell, Search } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -38,7 +38,27 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <AlertTriangle size={20} color="var(--accent-primary)" />
           <span className="mobile-title">Civicly</span>
         </div>
-        <div className="mobile-header-right">
+        <div className="mobile-header-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={12} style={{ position: 'absolute', left: '8px', color: 'var(--text-muted)' }} />
+            <input 
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="standard-input"
+              style={{ 
+                width: '120px', 
+                padding: '6px 8px 6px 26px', 
+                fontSize: '0.8rem', 
+                borderRadius: 'var(--radius-pill)', 
+                background: 'var(--surface-color)', 
+                color: 'var(--text-main)', 
+                border: '1px solid var(--border-color)',
+                outline: 'none'
+              }}
+            />
+          </div>
           <span className="feed-badge">{posts.length} Reports</span>
         </div>
       </header>
