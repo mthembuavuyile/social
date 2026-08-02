@@ -4,7 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
 import { Post } from '../types';
 import { PostCard } from '../components/Feed/PostCard';
-import { fetchComments, addComment } from '../hooks/usePosts';
+import { fetchComments, addComment, voteOnPoll } from '../hooks/usePosts';
 import { ArrowLeft, Share2, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -48,6 +48,9 @@ export const PostDetail: React.FC<PostDetailProps> = ({ user }) => {
             latitude: data.latitude,
             longitude: data.longitude,
             socialUrl: data.socialUrl,
+            pollOptions: data.pollOptions,
+            pollExpiresAt: data.pollExpiresAt,
+            userVotes: data.userVotes || {},
           });
         } else {
           setError(true);
@@ -94,6 +97,31 @@ export const PostDetail: React.FC<PostDetailProps> = ({ user }) => {
       reactions: newReactions,
       userReactions: newUserReactions,
     });
+  };
+
+  const handleVoteOnPoll = async (postId: string, optionId: string) => {
+    if (!user || !post) {
+      toast.error('You must be logged in to vote.');
+      return;
+    }
+    try {
+      await voteOnPoll(postId, optionId, user.uid);
+      toast.success('Vote recorded!');
+      
+      // Update local state instantly for UI
+      const newPollOptions = post.pollOptions?.map((opt) => 
+        opt.id === optionId ? { ...opt, votes: (opt.votes || 0) + 1 } : opt
+      );
+      
+      setPost({
+        ...post,
+        pollOptions: newPollOptions,
+        userVotes: { ...(post.userVotes || {}), [user.uid]: optionId }
+      });
+      
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to record vote');
+    }
   };
 
   const handleUpdateStatus = async (status: 'active' | 'in_progress' | 'resolved') => {
@@ -178,6 +206,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ user }) => {
           }}
           onUpdateStatus={(_, status) => handleUpdateStatus(status)}
           fetchComments={fetchComments}
+          onVoteOnPoll={handleVoteOnPoll}
           onAddComment={(postId, text, parentId) => {
             if (user) {
               addComment(postId, text, { uid: user.uid, displayName: user.displayName }, parentId);

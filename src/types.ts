@@ -34,6 +34,7 @@ export interface Post {
   // Poll & Comments Data
   pollOptions?: PollOption[];
   pollExpiresAt?: number;
+  userVotes?: Record<string, string>; // userId -> optionId
   commentsCount?: number;
 
   // Shared Fields

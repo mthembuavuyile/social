@@ -32,7 +32,10 @@ service cloud.firestore {
         && (!('policeContacted' in data) || data.policeContacted is bool)
         && (!('anonymous' in data) || data.anonymous is bool)
         && (!('socialUrl' in data) || isValidString(data.socialUrl, 500))
-        && (!('imageUrl' in data) || isValidString(data.imageUrl, 1000));
+        && (!('imageUrl' in data) || isValidString(data.imageUrl, 1000))
+        && (!('pollOptions' in data) || data.pollOptions is list)
+        && (!('pollExpiresAt' in data) || data.pollExpiresAt is number)
+        && (!('userVotes' in data) || data.userVotes is map);
     }
 
     match /posts/{postId} {
@@ -47,10 +50,10 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         // Authors can update their own posts completely (status, content, etc)
         (isAuthor(resource.data) && isValidPostData(request.resource.data)) || (
-          // Non-authors can ONLY update reactions, userReactions, and commentsCount for endorsements and activity tracking.
+          // Non-authors can ONLY update reactions, userReactions, commentsCount, pollOptions, and userVotes.
           // All other fields must remain unchanged.
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['reactions', 'userReactions', 'commentsCount'])
+            .hasOnly(['reactions', 'userReactions', 'commentsCount', 'pollOptions', 'userVotes'])
         )
       );
 

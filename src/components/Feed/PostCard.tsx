@@ -327,13 +327,12 @@ export const PostCard: React.FC<PostCardProps> = ({
         {formatRichTextReact(post.content)}
       </div>
 
-      {/* Poll View */}
       {post.pollOptions && post.pollOptions.length > 0 && (
         <PollView 
           options={post.pollOptions} 
           expiresAt={post.pollExpiresAt} 
           onVote={(optionId) => onVoteOnPoll && onVoteOnPoll(post.id, optionId)}
-          userVotedId={null} // TODO: hook up to user data if needed
+          userVotedId={user ? post.userVotes?.[user.uid] : null}
         />
       )}
 

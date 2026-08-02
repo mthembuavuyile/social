@@ -2,7 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { PostComposer } from '../components/Feed/PostComposer';
 import { PostCard } from '../components/Feed/PostCard';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { fetchComments, addComment } from '../hooks/usePosts';
+import { fetchComments, addComment, voteOnPoll } from '../hooks/usePosts';
 import { dbFirestore } from '../firebase';
 import toast from 'react-hot-toast';
 import { Post } from '../types';
@@ -63,6 +63,19 @@ export const Home: React.FC<HomeProps> = ({
     }
     
     await updateDoc(postRef, { reactions: newReactions, userReactions: newUserReactions });
+  };
+
+  const handleVoteOnPoll = async (postId: string, optionId: string) => {
+    if (!user) {
+      toast.error('You must be logged in to vote.');
+      return;
+    }
+    try {
+      await voteOnPoll(postId, optionId, user.uid);
+      toast.success('Vote recorded!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to record vote');
+    }
   };
 
   // Auto Scroll & Highlight target post if hash or query param is present
@@ -242,6 +255,7 @@ export const Home: React.FC<HomeProps> = ({
               }}
               onUpdateStatus={updatePostStatus}
               fetchComments={fetchComments}
+              onVoteOnPoll={handleVoteOnPoll}
               onAddComment={(postId, text, parentId) => {
                 if (user) {
                   addComment(postId, text, { uid: user.uid, displayName: user.displayName }, parentId);

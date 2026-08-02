@@ -78,6 +78,30 @@ export const deleteComment = async (postId: string, commentId: string, currentUs
   }
 };
 
+export const voteOnPoll = async (postId: string, optionId: string, userId: string) => {
+  const postRef = doc(dbFirestore, 'posts', postId);
+  const postSnap = await getDoc(postRef);
+  if (!postSnap.exists()) return;
+  const data = postSnap.data();
+  const userVotes = data.userVotes || {};
+  
+  // Prevent double voting
+  if (userVotes[userId]) return;
+
+  const pollOptions = data.pollOptions || [];
+  const updatedOptions = pollOptions.map((opt: any) => {
+    if (opt.id === optionId) {
+      return { ...opt, votes: (opt.votes || 0) + 1 };
+    }
+    return opt;
+  });
+
+  await updateDoc(postRef, {
+    pollOptions: updatedOptions,
+    [`userVotes.${userId}`]: optionId
+  });
+};
+
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +124,9 @@ export function usePosts() {
           reactions: data.reactions || {},
           userReactions: data.userReactions || {},
           commentsCount: data.commentsCount || 0,
+          pollOptions: data.pollOptions,
+          pollExpiresAt: data.pollExpiresAt,
+          userVotes: data.userVotes || {},
           
           // Shared fields
           reportType: data.reportType || 'civic',
