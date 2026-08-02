@@ -122,7 +122,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         </NavLink>
 
         <a 
-          href="/about" 
+          href="/about.html" 
           className="sidebar-link"
         >
           <ShieldCheck size={20} />
