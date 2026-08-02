@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { Comment } from '../../types';
 import { timeAgo, getInitials, getUserColor } from '../../utils';
-import { Send, MessageSquare, Reply, X } from 'lucide-react';
+import { Send, MessageSquare, Reply, X, Trash2 } from 'lucide-react';
 
 interface CommentSectionProps {
   postId: string;
   comments: Comment[];
   user: { uid: string; displayName: string } | null;
   onAddComment: (postId: string, text: string, parentId?: string) => void;
+  onDeleteComment?: (commentId: string, parentId?: string) => void;
   isAnonymousPost?: boolean;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments, user, onAddComment }) => {
+export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments, user, onAddComment, onDeleteComment }) => {
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<{ id: string, author: string } | null>(null);
 
@@ -82,6 +83,18 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments
                     >
                       <Reply size={12} /> Reply
                     </button>
+                    {user?.uid === comment.authorUid && onDeleteComment && (
+                      <button 
+                        onClick={() => {
+                          if (window.confirm('Delete this comment?')) {
+                            onDeleteComment(comment.id);
+                          }
+                        }}
+                        style={{ background: 'none', border: 'none', fontSize: '0.75rem', color: '#ef4444', fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -121,6 +134,20 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments
                           <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.4, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                             {reply.content}
                           </div>
+                          {user?.uid === reply.authorUid && onDeleteComment && (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                              <button 
+                                onClick={() => {
+                                  if (window.confirm('Delete this reply?')) {
+                                    onDeleteComment(reply.id, reply.parentId);
+                                  }
+                                }}
+                                style={{ background: 'none', border: 'none', fontSize: '0.7rem', color: '#ef4444', fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '2px' }}
+                              >
+                                <Trash2 size={10} /> Delete
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

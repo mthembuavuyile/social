@@ -5,6 +5,7 @@ import { ThumbsUp, MapPin, Clock, Trash2, CheckCircle2, AlertTriangle, Share2, C
 import { TwitterEmbed } from './TwitterEmbed';
 import { PollView } from './PollView';
 import { CommentSection } from './CommentSection';
+import { deleteComment } from '../../hooks/usePosts';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { formatTelUri } from '../../data/emergencyContacts';
@@ -125,6 +126,17 @@ export const PostCard: React.FC<PostCardProps> = ({
         };
         setComments([...comments, newComment]);
       }
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, parentId?: string) => {
+    if (!user) return;
+    try {
+      await deleteComment(post.id, commentId, user.uid, parentId);
+      setComments(comments.filter(c => c.id !== commentId));
+      toast.success('Comment deleted');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete comment');
     }
   };
 
@@ -436,6 +448,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             comments={comments}
             user={user}
             onAddComment={handleAddComment}
+            onDeleteComment={handleDeleteComment}
             isAnonymousPost={isAnonymous}
           />
         )

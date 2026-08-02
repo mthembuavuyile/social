@@ -53,6 +53,31 @@ export const addComment = async (postId: string, text: string, user: { uid: stri
   }
 };
 
+export const deleteComment = async (postId: string, commentId: string, currentUserUid: string, parentId?: string) => {
+  const commentRef = doc(dbFirestore, 'posts', postId, 'comments', commentId);
+  const snap = await getDoc(commentRef);
+  if (!snap.exists()) {
+    throw new Error('Comment not found.');
+  }
+  if (snap.data()?.authorUid !== currentUserUid) {
+    throw new Error('You can only delete your own comments.');
+  }
+  
+  await deleteDoc(commentRef);
+
+  const postRef = doc(dbFirestore, 'posts', postId);
+  await updateDoc(postRef, {
+    commentsCount: increment(-1)
+  });
+
+  if (parentId) {
+    const parentCommentRef = doc(dbFirestore, 'posts', postId, 'comments', parentId);
+    await updateDoc(parentCommentRef, {
+      replyCount: increment(-1)
+    });
+  }
+};
+
 export function usePosts() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
