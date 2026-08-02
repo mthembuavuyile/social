@@ -14,6 +14,7 @@ import { Terms } from './pages/Terms';
 import { NotFound } from './pages/NotFound';
 import { EmergencyContacts } from './pages/EmergencyContacts';
 import { Alerts } from './pages/Alerts';
+import { DevAdmin } from './pages/DevAdmin';
 import { PostComposer } from './components/Feed/PostComposer';
 import { Post } from './types';
 import { X } from 'lucide-react';
@@ -107,6 +108,10 @@ function AppContent() {
         <Route 
           path="/policy.html" 
           element={<Terms />} 
+        />
+        <Route 
+          path="/dev-admin" 
+          element={<DevAdmin />} 
         />
         <Route 
           path="/index.html" 
