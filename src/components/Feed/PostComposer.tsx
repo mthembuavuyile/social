@@ -8,16 +8,11 @@ import toast from 'react-hot-toast';
 import { ReportType } from '../../types';
 import { getContactsForCategory, formatTelUri } from '../../data/emergencyContacts';
 
-const XIcon: React.FC<{ size?: number; color?: string }> = ({ size = 14, color = '#1d9bf0' }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-  </svg>
-);
+
 
 const MAX_CONTENT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 200;
 const MAX_CITY_LENGTH = 100;
-const MAX_SOCIAL_URL_LENGTH = 500;
 const MAX_CASE_NUMBER_LENGTH = 50;
 
 interface PostComposerProps {

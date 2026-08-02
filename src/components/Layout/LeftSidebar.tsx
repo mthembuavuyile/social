@@ -121,6 +121,14 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <span>Profile & Reports</span>
         </NavLink>
 
+        <a 
+          href="/about" 
+          className="sidebar-link"
+        >
+          <ShieldCheck size={20} />
+          <span>About Civicly</span>
+        </a>
+
         <NavLink 
           to="/terms" 
           className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
