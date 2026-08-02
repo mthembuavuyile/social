@@ -119,9 +119,14 @@ export const CivicMap: React.FC<CivicMapProps> = ({
           <div style="margin: 0 0 8px 0; font-size: 0.8rem; font-weight: bold; color: #00ba7c;">
             ${bountyText}
           </div>
-          <button id="view-post-${post.id}" style="width: 100%; border: none; background: #1d9bf0; color: white; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer; display: block; text-align: center;">
-            View in Feed
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button id="view-post-${post.id}" style="flex: 1; border: none; background: #1d9bf0; color: white; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer; text-align: center;">
+              View Post
+            </button>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${post.latitude},${post.longitude}" target="_blank" rel="noopener noreferrer" style="flex: 1; border: 1px solid #1d9bf0; background: transparent; color: #1d9bf0; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box; display: inline-block;">
+              Navigate
+            </a>
+          </div>
         </div>
       `;
 
