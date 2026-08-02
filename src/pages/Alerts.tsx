@@ -107,9 +107,9 @@ export const Alerts: React.FC<AlertsProps> = ({
               }}
               onUpdateStatus={updatePostStatus}
               fetchComments={fetchComments}
-              onAddComment={(postId, text) => {
+              onAddComment={(postId, text, parentId) => {
                 if (user) {
-                  addComment(postId, text, { uid: user.uid, displayName: user.displayName });
+                  addComment(postId, text, { uid: user.uid, displayName: user.displayName }, parentId);
                 }
               }}
             />

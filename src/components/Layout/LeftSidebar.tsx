@@ -10,7 +10,8 @@ import {
   PlusCircle,
   Activity,
   Shield,
-  Phone
+  Phone,
+  Settings
 } from 'lucide-react';
 import { getInitials, getUserColor } from '../../utils';
 
@@ -119,6 +120,14 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         >
           <User size={20} />
           <span>Profile & Reports</span>
+        </NavLink>
+
+        <NavLink 
+          to="/settings" 
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <Settings size={20} />
+          <span>Settings</span>
         </NavLink>
 
         <a 

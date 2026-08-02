@@ -9,7 +9,7 @@ interface ProfileProps {
   updateUserName: (name: string) => Promise<void>;
 }
 
-export const Profile: React.FC<ProfileProps> = ({ user, updateUserName }) => {
+export const Settings: React.FC<ProfileProps> = ({ user, updateUserName }) => {
   const [profileNameInput, setProfileNameInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 

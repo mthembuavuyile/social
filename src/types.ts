@@ -17,6 +17,8 @@ export interface Comment {
   author: string;
   authorUid: string;
   timestamp: number;
+  parentId?: string;
+  replyCount?: number;
 }
 
 export interface Post {

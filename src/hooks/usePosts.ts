@@ -17,25 +17,40 @@ export const fetchComments = async (postId: string): Promise<Comment[]> => {
       author: data.author,
       authorUid: data.authorUid,
       timestamp: data.timestamp ? (data.timestamp.toMillis ? data.timestamp.toMillis() : data.timestamp) : Date.now(),
+      parentId: data.parentId,
+      replyCount: data.replyCount || 0,
     });
   });
   return commentsArray;
 };
 
-export const addComment = async (postId: string, text: string, user: { uid: string, displayName: string }) => {
+export const addComment = async (postId: string, text: string, user: { uid: string, displayName: string }, parentId?: string) => {
   const commentsRef = collection(dbFirestore, 'posts', postId, 'comments');
-  await addDoc(commentsRef, {
+  const commentData: any = {
     postId,
     content: text,
     author: user.displayName,
     authorUid: user.uid,
     timestamp: serverTimestamp(),
-  });
+  };
+  
+  if (parentId) {
+    commentData.parentId = parentId;
+  }
+  
+  await addDoc(commentsRef, commentData);
   
   const postRef = doc(dbFirestore, 'posts', postId);
   await updateDoc(postRef, {
     commentsCount: increment(1)
   });
+  
+  if (parentId) {
+    const parentCommentRef = doc(dbFirestore, 'posts', postId, 'comments', parentId);
+    await updateDoc(parentCommentRef, {
+      replyCount: increment(1)
+    });
+  }
 };
 
 export function usePosts() {

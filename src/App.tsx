@@ -8,7 +8,8 @@ import { Toaster } from 'react-hot-toast';
 import { AppLayout } from './components/Layout/AppLayout';
 import { Home } from './pages/Home';
 import { MapView } from './pages/MapView';
-import { Profile } from './pages/Profile';
+import { Settings } from './pages/Settings';
+import { UserProfile } from './pages/UserProfile';
 import { PostDetail } from './pages/PostDetail';
 import { Terms } from './pages/Terms';
 import { NotFound } from './pages/NotFound';
@@ -90,8 +91,16 @@ function AppContent() {
           element={<EmergencyContacts />} 
         />
         <Route 
+          path="/settings" 
+          element={<Settings user={user} updateUserName={updateUserName} />} 
+        />
+        <Route 
+          path="/profile/:uid" 
+          element={<UserProfile user={user} />} 
+        />
+        <Route 
           path="/profile" 
-          element={<Profile user={user} updateUserName={updateUserName} />} 
+          element={user ? <Navigate to={`/profile/${user.uid}`} replace /> : <Navigate to="/" replace />} 
         />
         <Route 
           path="/terms" 

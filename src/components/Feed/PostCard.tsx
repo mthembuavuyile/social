@@ -16,7 +16,7 @@ interface PostCardProps {
   onDeletePost: (postId: string) => void;
   onUpdateStatus: (postId: string, status: 'active' | 'in_progress' | 'resolved') => void;
   onVoteOnPoll?: (postId: string, optionId: string) => void;
-  onAddComment?: (postId: string, text: string) => void;
+  onAddComment?: (postId: string, text: string, parentId?: string) => void;
   fetchComments?: (postId: string) => Promise<Comment[]>;
 }
 
@@ -110,9 +110,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const handleAddComment = (postId: string, text: string) => {
+  const handleAddComment = (postId: string, text: string, parentId?: string) => {
     if (onAddComment) {
-      onAddComment(postId, text);
+      onAddComment(postId, text, parentId);
       if (user) {
         const newComment: Comment = {
           id: Date.now().toString(),
@@ -121,6 +121,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           author: user.displayName,
           authorUid: user.uid,
           timestamp: Date.now(),
+          parentId,
         };
         setComments([...comments, newComment]);
       }
@@ -182,17 +183,21 @@ export const PostCard: React.FC<PostCardProps> = ({
       {/* Header Info */}
       <div className="post-header">
         <div className="post-author-info">
-          <div 
-            className={`user-avatar ${isAnonymous ? 'avatar-anonymous' : ''}`} 
-            style={{ background: isAnonymous ? '#374151' : ac1 }}
-          >
-            {isAnonymous ? <EyeOff size={14} /> : authorInitials}
-          </div>
-          <div className="post-meta">
-            <div className={`post-author-name ${isAnonymous ? 'author-anonymous' : ''}`}>
-              {displayAuthor}
-              {isAnonymous && <EyeOff size={11} style={{ marginLeft: '4px', opacity: 0.6 }} />}
+          <Link to={`/profile/${post.authorUid}`} style={{ textDecoration: 'none' }}>
+            <div 
+              className={`user-avatar ${isAnonymous ? 'avatar-anonymous' : ''}`} 
+              style={{ background: isAnonymous ? '#374151' : ac1 }}
+            >
+              {isAnonymous ? <EyeOff size={14} /> : authorInitials}
             </div>
+          </Link>
+          <div className="post-meta">
+            <Link to={`/profile/${post.authorUid}`} style={{ textDecoration: 'none', display: 'block' }}>
+              <div className={`post-author-name ${isAnonymous ? 'author-anonymous' : ''}`}>
+                {displayAuthor}
+                {isAnonymous && <EyeOff size={11} style={{ marginLeft: '4px', opacity: 0.6 }} />}
+              </div>
+            </Link>
             <Link to={`/post/${post.id}`} className="post-timestamp-link">
               <Clock size={12} />
               <span>{timeAgo(post.timestamp)}</span>
