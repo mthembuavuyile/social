@@ -8,11 +8,8 @@ import toast from 'react-hot-toast';
 import { ReportType } from '../../types';
 import { getContactsForCategory, formatTelUri } from '../../data/emergencyContacts';
 
-
-
 const MAX_CONTENT_LENGTH = 2000;
 const MAX_LOCATION_LENGTH = 200;
-const MAX_CITY_LENGTH = 100;
 const MAX_CASE_NUMBER_LENGTH = 50;
 
 interface PostComposerProps {
@@ -42,7 +39,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
   const [isExpanded, setIsExpanded] = useState(false);
   const [content, setContent] = useState('');
   const [location, setLocation] = useState('');
-  const [province, setProvince] = useState('Gauteng');
+  const [province, setProvince] = useState('');
   const [city, setCity] = useState('');
   const [category, setCategory] = useState('pothole');
   const [socialUrl, setSocialUrl] = useState('');
@@ -111,7 +108,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
     setImageUrl('');
     setImagePreviewError(false);
     setLocation('');
-    setProvince('Gauteng');
+    setProvince('');
     setCity('');
     setCategory(reportType === 'crime' ? 'theft' : 'pothole');
     setSocialUrl('');
@@ -168,14 +165,18 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
     }
 
     setIsPosting(true);
-    
+
     let finalLat = latitude;
     let finalLng = longitude;
 
     if (finalLat === undefined || finalLng === undefined) {
       try {
-        const query = encodeURIComponent(`${trimmedLoc}, ${city ? city.trim() + ', ' : ''}${province}, South Africa`);
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`);
+        const locationQuery = [trimmedLoc, city, province, 'South Africa']
+          .filter(Boolean)
+          .map(p => p.trim())
+          .join(', ');
+        const query = encodeURIComponent(locationQuery);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1&email=hello@civicly-za.vercel.app`);
         const data = await res.json();
         if (data && data.length > 0) {
           finalLat = parseFloat(data[0].lat);
@@ -243,7 +244,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
         // Reverse geocode to get real address
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&email=hello@civicly-za.vercel.app`,
             { headers: { 'Accept-Language': 'en' } }
           );
           const data = await res.json();
@@ -305,9 +306,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
       return;
     }
     try {
-      const searchQuery = encodeURIComponent(`${query}, ${province}, South Africa`);
+      const locationQuery = [query, province, 'South Africa'].filter(Boolean).map(p => p.trim()).join(', ');
+      const searchQuery = encodeURIComponent(locationQuery);
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=5&addressdetails=1&countrycodes=za`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=5&addressdetails=1&countrycodes=za&email=hello@civicly-za.vercel.app`,
         { headers: { 'Accept-Language': 'en' } }
       );
       const data = await res.json();
@@ -407,8 +409,8 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
         <div className="user-avatar" style={avatarStyle}>{initials}</div>
         <textarea
           className="compose-input"
-          placeholder={isCrime 
-            ? "Describe the crime incident — what happened, when, any details that could help the community stay safe..." 
+          placeholder={isCrime
+            ? "Describe the crime incident — what happened, when, any details that could help the community stay safe..."
             : "Report a civic issue or paste an X/Twitter post link..."
           }
           rows={isExpanded ? 3 : 1}
@@ -504,20 +506,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
                 )}
               </select>
             </div>
-            <div className="form-group">
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Province</label>
-              <select className="standard-input" value={province} onChange={(e) => setProvince(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
-                <option value="Eastern Cape">Eastern Cape</option>
-                <option value="Free State">Free State</option>
-                <option value="Gauteng">Gauteng</option>
-                <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                <option value="Limpopo">Limpopo</option>
-                <option value="Mpumalanga">Mpumalanga</option>
-                <option value="North West">North West</option>
-                <option value="Northern Cape">Northern Cape</option>
-                <option value="Western Cape">Western Cape</option>
-              </select>
-            </div>
           </div>
 
           {/* Crime-specific: Urgency & Incident Time */}
@@ -525,10 +513,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
             <div className="composer-responsive-grid">
               <div className="form-group">
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Urgency Level</label>
-                <select 
-                  className="standard-input" 
-                  value={crimeUrgency} 
-                  onChange={(e) => setCrimeUrgency(e.target.value)} 
+                <select
+                  className="standard-input"
+                  value={crimeUrgency}
+                  onChange={(e) => setCrimeUrgency(e.target.value)}
                   style={{ width: '100%', padding: '8px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
                 >
                   <option value="low">🟢 Low — Informational</option>
@@ -634,22 +622,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
             )}
           </div>
 
-          <div className="form-group">
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>City</label>
-            <input
-              type="text"
-              className="standard-input"
-              placeholder="e.g. Johannesburg"
-              value={city}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_CITY_LENGTH) {
-                  setCity(e.target.value);
-                }
-              }}
-              maxLength={MAX_CITY_LENGTH}
-              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)' }}
-            />
-          </div>
+
 
           {/* Crime-specific: Police Contact & Case Number */}
           {isCrime && (
@@ -727,8 +700,8 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
               />
               {!imageUrl && (
                 <>
-                  <label 
-                    htmlFor="image-upload" 
+                  <label
+                    htmlFor="image-upload"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-main)', cursor: isUploadingImage ? 'not-allowed' : 'pointer', opacity: isUploadingImage ? 0.7 : 1, whiteSpace: 'nowrap' }}
                   >
                     {isUploadingImage ? <Loader2 className="animate-spin" size={16} /> : <ImageIcon size={16} />}
@@ -796,7 +769,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
                   + Add Option
                 </button>
               )}
-              
+
               <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Poll Duration:</label>
                 <select value={pollExpiryDuration} onChange={(e) => setPollExpiryDuration(e.target.value)} style={{ padding: '6px', borderRadius: '4px', background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
@@ -812,10 +785,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ user, onSubmitPost }
 
         <div className="composer-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button className="btn-cancel" onClick={handleCancel} disabled={isPosting} style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
-          <button 
+          <button
             className={`btn-primary ${isCrime ? 'btn-crime-submit' : ''}`}
-            onClick={handlePost} 
-            disabled={isPosting || !content.trim() || !location.trim()} 
+            onClick={handlePost}
+            disabled={isPosting || !content.trim() || !location.trim()}
             style={{ padding: '8px 16px', borderRadius: '4px', border: 'none', background: isCrime ? 'var(--crime-accent, #dc2626)' : 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', opacity: isPosting || !content.trim() || !location.trim() ? 0.5 : 1 }}
           >
             {isCrime ? <Shield size={14} /> : <Send size={14} />}
