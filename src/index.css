@@ -40,7 +40,6 @@ html, body {
 #root, .app-shell {
   width: 100%;
   max-width: 100vw;
-  overflow-x: hidden;
 }
 
 /* Global Avatar Styling */
@@ -229,6 +228,23 @@ html, body {
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  overflow-y: auto;
+  padding-right: 8px; /* Add some padding so scrollbar doesn't overlap content */
+}
+
+/* Custom scrollbar for sidebar nav */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-pill);
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .sidebar-link {
