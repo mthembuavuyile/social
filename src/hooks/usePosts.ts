@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc, getDoc, getDocs, increment } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, deleteDoc, getDoc, getDocs, increment, limit } from 'firebase/firestore';
 import { dbFirestore } from '../firebase';
 import { Post, Comment } from '../types';
 
@@ -59,7 +59,7 @@ export function usePosts() {
 
   useEffect(() => {
     const postsRef = collection(dbFirestore, 'posts');
-    const q = query(postsRef, orderBy('timestamp', 'desc'));
+    const q = query(postsRef, orderBy('timestamp', 'desc'), limit(50));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsArray: Post[] = [];
