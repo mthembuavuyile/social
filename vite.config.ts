@@ -11,6 +11,12 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         policy: resolve(__dirname, 'policy.html'),
       },
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+        }
+      }
     },
   },
 });

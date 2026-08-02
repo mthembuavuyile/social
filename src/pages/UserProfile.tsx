@@ -121,7 +121,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user }) => {
         <h2 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           {profileName}
           {!isAnonymousProfile && (
-            <ShieldCheck size={20} color="var(--accent-success)" title="Active Citizen" />
+            <span title="Active Citizen" style={{ display: 'flex' }}>
+              <ShieldCheck size={20} color="var(--accent-success)" />
+            </span>
           )}
         </h2>
         
