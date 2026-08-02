@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { CivicMap } from '../components/Map/CivicMap';
 import { usePosts, fetchComments, addComment } from '../hooks/usePosts';
 import { PostCard } from '../components/Feed/PostCard';
@@ -13,7 +14,18 @@ interface MapViewProps {
 
 export const MapView: React.FC<MapViewProps> = ({ user }) => {
   const { posts, loading, updatePostStatus, deletePost } = usePosts();
+  const location = useLocation();
+  
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
+  // Parse URL to check if we should auto-select a post
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const postId = params.get('post');
+    if (postId) {
+      setSelectedPostId(postId);
+    }
+  }, [location.search]);
 
   const selectedPost = posts.find((p) => p.id === selectedPostId);
 

@@ -263,9 +263,15 @@ export const PostCard: React.FC<PostCardProps> = ({
           </span>
         )}
         {post.location && (
-          <span className="location-chip">
-            <MapPin size={12} /> {post.location}
-          </span>
+          post.latitude !== undefined && post.longitude !== undefined ? (
+            <Link to={`/map?post=${post.id}`} className="location-chip" style={{ cursor: 'pointer', textDecoration: 'none' }} title="View on map">
+              <MapPin size={12} /> {post.location}
+            </Link>
+          ) : (
+            <span className="location-chip">
+              <MapPin size={12} /> {post.location}
+            </span>
+          )
         )}
         {/* Crime Urgency Badge */}
         {isCrime && post.crimeUrgency && urgencyConfig[post.crimeUrgency] && (
